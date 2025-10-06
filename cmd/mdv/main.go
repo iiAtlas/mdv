@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -155,9 +156,9 @@ func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
 	}
 }
 
-// findMarkdownFiles returns all markdown files in the current directory (non-recursive)
-func findMarkdownFiles() ([]string, error) {
-	entries, err := os.ReadDir(".")
+// findMarkdownFiles returns all markdown files in the specified directory (non-recursive)
+func findMarkdownFiles(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -175,8 +176,17 @@ func findMarkdownFiles() ([]string, error) {
 	return files, nil
 }
 
+// isDirectory checks if the given path is a directory
+func isDirectory(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
 var rootCmd = &cobra.Command{
-	Use:   "mdv [file.md]",
+	Use:   "mdv [file.md|directory]",
 	Short: "Markdown viewer with TUI",
 	Long:  `A terminal-based markdown viewer with support for themes, auto-reload, and GUI mode.`,
 	Args:  cobra.MaximumNArgs(1),
@@ -189,19 +199,36 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to bind flags: %w", err)
 		}
 
-		// Auto-detect markdown file if no args provided
+		// Auto-detect markdown file if no args provided, or if arg is a directory
 		var fileArg string
+		var scanDir string
+		var needsScan bool
+
 		if len(args) == 0 {
-			files, err := findMarkdownFiles()
+			// No args, scan current directory
+			scanDir = "."
+			needsScan = true
+		} else if isDirectory(args[0]) {
+			// Arg is a directory, scan it
+			scanDir = args[0]
+			needsScan = true
+		} else {
+			// Arg is a file path
+			fileArg = args[0]
+			needsScan = false
+		}
+
+		if needsScan {
+			files, err := findMarkdownFiles(scanDir)
 			if err != nil {
 				return fmt.Errorf("failed to scan directory: %w", err)
 			}
 			if len(files) == 0 {
-				return fmt.Errorf("no markdown files found in current directory")
+				return fmt.Errorf("no markdown files found in %s", scanDir)
 			}
 			if len(files) == 1 {
 				// Auto-select the only file
-				fileArg = files[0]
+				fileArg = filepath.Join(scanDir, files[0])
 			} else {
 				// Multiple files found, show picker
 				picker := pickerModel{files: files}
@@ -214,10 +241,8 @@ var rootCmd = &cobra.Command{
 				if pickerResult.selected == "" {
 					return fmt.Errorf("no file selected")
 				}
-				fileArg = pickerResult.selected
+				fileArg = filepath.Join(scanDir, pickerResult.selected)
 			}
-		} else {
-			fileArg = args[0]
 		}
 
 		// Decode config
