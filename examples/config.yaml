@@ -1,0 +1,21 @@
+# Global mdv configuration
+# Place this file at:
+#   macOS:   ~/.config/mdv/config.yaml
+#   Linux:   ~/.config/mdv/config.yaml
+#   Windows: %APPDATA%/mdv/config.yaml
+
+# Theme for markdown rendering
+# Options: "dark", "light", "auto", "notty", "dracula", "pink", "tokyo-night"
+theme: dark
+
+# Text wrap width for terminal rendering
+# Set to 0 to disable wrapping
+wrap: 80
+
+# Open in GUI mode by default
+# Note: You should still use the mdv-gui command for GUI mode
+gui: false
+
+# Auto-reload on file changes
+# Useful for live preview while editing
+watch: false

@@ -33,3 +33,6 @@ go.work
 build/
 frontend/dist/
 wails_build.log
+
+# Local config files
+.mdv.yaml
