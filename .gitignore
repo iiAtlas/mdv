@@ -29,9 +29,10 @@ go.work
 # Temporary files
 *.tmp
 
-# Wails
-build/
-frontend/dist/
+# Wails (GUI build artifacts)
+cmd/mdv-gui/build/
+cmd/mdv-gui/frontend/wailsjs/
+cmd/mdv-gui/frontend/dist/
 wails_build.log
 
 # Local config files
