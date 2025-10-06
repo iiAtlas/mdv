@@ -28,3 +28,8 @@ go.work
 
 # Temporary files
 *.tmp
+
+# Wails
+build/
+frontend/dist/
+wails_build.log
