@@ -72,8 +72,11 @@ tasks:
   demo:
     desc: Run commands with locally built binaries (simulates installation, e.g. task demo -- mdv -g examples/demo.md)
     deps: [build:tui, build:gui]
+    vars:
+      ROOT_DIR:
+        sh: pwd
     cmds:
-      - PATH=$PWD:$PWD/{{.GUI_DIR}}/build/bin:$PWD/{{.GUI_DIR}}/build/bin/mdv-gui.app/Contents/MacOS:$PATH {{.CLI_ARGS}}
+      - cd {{.USER_WORKING_DIR}} && PATH={{.ROOT_DIR}}:{{.ROOT_DIR}}/{{.GUI_DIR}}/build/bin:{{.ROOT_DIR}}/{{.GUI_DIR}}/build/bin/mdv-gui.app/Contents/MacOS:$PATH {{.CLI_ARGS}}
     silent: false
 
   # === CLEAN TASKS ===
