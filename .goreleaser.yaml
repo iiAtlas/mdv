@@ -27,32 +27,32 @@ builds:
     mod_timestamp: '{{ .CommitTimestamp }}'
 
   # GUI binary (mdv-gui)
-  # Note: Wails requires CGO and platform-specific builds
-  # Building with Wails in GoReleaser requires additional setup
-  # For now, mdv-gui should be built separately with 'wails build'
-  # Uncomment and configure when ready for GUI releases
-  #
-  # - id: mdv-gui
-  #   binary: mdv-gui
-  #   main: ./cmd/mdv-gui
-  #   env:
-  #     - CGO_ENABLED=1
-  #   goos:
-  #     - linux
-  #     - darwin
-  #     - windows
-  #   goarch:
-  #     - amd64
-  #     - arm64
-  #   hooks:
-  #     pre:
-  #       - wails build -clean
-  #   skip: true  # Skip for now, build manually
+  # Note: Wails builds are handled separately via `wails build`
+  # The binary is then manually added to the release
+  - id: mdv-gui
+    binary: mdv-gui
+    main: ./cmd/mdv-gui
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    hooks:
+      pre:
+        - sh: cd cmd/mdv-gui && wails build -clean -platform {{.Os}}/{{.Arch}}
+    ldflags:
+      - -s -w
+    mod_timestamp: '{{ .CommitTimestamp }}'
 
 archives:
   - id: mdv-archive
     builds:
       - mdv
+      - mdv-gui
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -98,23 +98,23 @@ changelog:
     - title: Others
       order: 999
 
-# Optional: Homebrew tap
-# Uncomment and configure when ready
-# brews:
-#   - name: mdv
-#     ids:
-#       - mdv-archive
-#     homepage: https://github.com/iiatlas/mdv
-#     description: Terminal-based markdown viewer with TUI and GUI modes
-#     license: MIT
-#     repository:
-#       owner: iiatlas
-#       name: homebrew-tap
-#     folder: Formula
-#     install: |
-#       bin.install "mdv"
-#     test: |
-#       system "#{bin}/mdv", "--version"
+# Homebrew tap
+brews:
+  - name: mdv
+    ids:
+      - mdv-archive
+    homepage: https://github.com/iiatlas/mdv
+    description: Terminal-based markdown viewer with TUI and GUI modes
+    license: MIT
+    repository:
+      owner: iiatlas
+      name: homebrew-tap
+    folder: Formula
+    install: |
+      bin.install "mdv"
+      bin.install "mdv-gui"
+    test: |
+      system "#{bin}/mdv", "--version"
 
 # Optional: Docker images
 # dockers:

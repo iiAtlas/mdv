@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -129,9 +130,20 @@ var rootCmd = &cobra.Command{
 
 		// Check if GUI mode requested
 		if cfg.GUI {
-			fmt.Println("GUI mode requested. Please use 'mdv-gui' command instead.")
-			fmt.Printf("Example: mdv-gui %s\n", cfg.File)
-			return nil
+			// Try to exec mdv-gui if available
+			guiPath, err := exec.LookPath("mdv-gui")
+			if err == nil {
+				// mdv-gui found, exec it
+				cmd := exec.Command(guiPath, cfg.File)
+				cmd.Stdin = os.Stdin
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				return cmd.Run()
+			}
+			// mdv-gui not found, print helpful message
+			fmt.Println("GUI mode requested, but 'mdv-gui' not found.")
+			fmt.Printf("Please install mdv-gui or run: mdv-gui %s\n", cfg.File)
+			return fmt.Errorf("mdv-gui not found in PATH")
 		}
 
 		// Read file

@@ -69,6 +69,13 @@ tasks:
       - wails dev{{if .ABS_PATH}} -appargs "{{.ABS_PATH}}"{{end}}
     silent: false
 
+  demo:
+    desc: Run commands with locally built binaries (simulates installation, e.g. task demo -- mdv -g examples/demo.md)
+    deps: [build:tui, build:gui]
+    cmds:
+      - PATH=$PWD:$PWD/{{.GUI_DIR}}/build/bin:$PWD/{{.GUI_DIR}}/build/bin/mdv-gui.app/Contents/MacOS:$PATH {{.CLI_ARGS}}
+    silent: false
+
   # === CLEAN TASKS ===
 
   clean:
