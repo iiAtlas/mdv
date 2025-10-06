@@ -60,10 +60,13 @@ tasks:
     silent: false
 
   run:gui:
-    desc: Run GUI (Wails) viewer in dev mode
+    desc: Run GUI (Wails) viewer in dev mode (use -- to pass args, e.g. task run:gui -- README.md)
     dir: "{{.GUI_DIR}}"
+    vars:
+      ABS_PATH:
+        sh: '{{if .CLI_ARGS}}realpath "{{.CLI_ARGS}}"{{end}}'
     cmds:
-      - wails dev
+      - wails dev{{if .ABS_PATH}} -appargs "{{.ABS_PATH}}"{{end}}
     silent: false
 
   # === CLEAN TASKS ===

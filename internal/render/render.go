@@ -3,6 +3,7 @@ package render
 import (
 	"bytes"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -30,4 +31,8 @@ func ToHTML(src []byte) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func ToANSI(src []byte, theme string) (string, error) {
+	return glamour.Render(string(src), theme)
 }

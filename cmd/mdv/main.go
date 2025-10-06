@@ -7,10 +7,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
 	"github.com/iiatlas/mdv/internal/config"
+	"github.com/iiatlas/mdv/internal/render"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +99,7 @@ func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
 		if err != nil {
 			return reloadMsg(fmt.Sprintf("Error reading file: %v", err))
 		}
-		out, err := glamour.Render(string(data), cfg.Theme)
+		out, err := render.ToANSI(data, cfg.Theme)
 		if err != nil {
 			return reloadMsg(fmt.Sprintf("Error rendering: %v", err))
 		}
@@ -143,7 +143,7 @@ var rootCmd = &cobra.Command{
 		// Render Markdown to ANSI with configured theme
 		// Note: glamour doesn't support wrap width directly via API,
 		// but we can use it for future custom rendering
-		out, err := glamour.Render(string(data), cfg.Theme)
+		out, err := render.ToANSI(data, cfg.Theme)
 		if err != nil {
 			return fmt.Errorf("render error: %w", err)
 		}
@@ -197,7 +197,7 @@ func watchFile(path, theme string, p *tea.Program) {
 				if err != nil {
 					continue
 				}
-				out, err := glamour.Render(string(data), theme)
+				out, err := render.ToANSI(data, theme)
 				if err != nil {
 					continue
 				}

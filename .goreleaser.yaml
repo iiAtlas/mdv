@@ -1,0 +1,130 @@
+version: 2
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+
+builds:
+  # TUI binary (mdv)
+  - id: mdv
+    binary: mdv
+    main: ./cmd/mdv
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+  # GUI binary (mdv-gui)
+  # Note: Wails requires CGO and platform-specific builds
+  # Building with Wails in GoReleaser requires additional setup
+  # For now, mdv-gui should be built separately with 'wails build'
+  # Uncomment and configure when ready for GUI releases
+  #
+  # - id: mdv-gui
+  #   binary: mdv-gui
+  #   main: ./cmd/mdv-gui
+  #   env:
+  #     - CGO_ENABLED=1
+  #   goos:
+  #     - linux
+  #     - darwin
+  #     - windows
+  #   goarch:
+  #     - amd64
+  #     - arm64
+  #   hooks:
+  #     pre:
+  #       - wails build -clean
+  #   skip: true  # Skip for now, build manually
+
+archives:
+  - id: mdv-archive
+    builds:
+      - mdv
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+      - examples/**/*
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'Performance improvements'
+      regexp: "^.*perf[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+
+# Optional: Homebrew tap
+# Uncomment and configure when ready
+# brews:
+#   - name: mdv
+#     ids:
+#       - mdv-archive
+#     homepage: https://github.com/iiatlas/mdv
+#     description: Terminal-based markdown viewer with TUI and GUI modes
+#     license: MIT
+#     repository:
+#       owner: iiatlas
+#       name: homebrew-tap
+#     folder: Formula
+#     install: |
+#       bin.install "mdv"
+#     test: |
+#       system "#{bin}/mdv", "--version"
+
+# Optional: Docker images
+# dockers:
+#   - image_templates:
+#       - "ghcr.io/iiatlas/mdv:{{ .Version }}"
+#       - "ghcr.io/iiatlas/mdv:latest"
+#     dockerfile: Dockerfile
+#     build_flag_templates:
+#       - "--pull"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"

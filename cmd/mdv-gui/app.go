@@ -18,8 +18,10 @@ func NewApp(path string) *App { return &App{path: path} }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	runtime.LogDebugf(ctx, "Startup called with path: '%s'", a.path)
 	// If no CLI arg, ask user to pick a file
 	if a.path == "" {
+		runtime.LogDebug(ctx, "No path provided, opening file dialog")
 		p, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 			Title: "Open Markdown",
 			Filters: []runtime.FileFilter{{DisplayName: "Markdown", Pattern: "*.md;*.markdown"}},
@@ -30,7 +32,13 @@ func (a *App) startup(ctx context.Context) {
 	}
 	// Load + render if we have a path
 	if a.path != "" {
-		_ = a.load(a.path)
+		runtime.LogDebugf(ctx, "Loading file: %s", a.path)
+		err := a.load(a.path)
+		if err != nil {
+			runtime.LogErrorf(ctx, "Failed to load file: %v", err)
+		} else {
+			runtime.LogDebugf(ctx, "Successfully loaded file, HTML length: %d", len(a.html))
+		}
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -18,6 +19,13 @@ func main() {
 	var path string
 	if len(os.Args) > 1 {
 		path = os.Args[1]
+		// Convert to absolute path if it's relative
+		if !filepath.IsAbs(path) {
+			absPath, err := filepath.Abs(path)
+			if err == nil {
+				path = absPath
+			}
+		}
 	}
 
 	// Create application with instance of App structure
