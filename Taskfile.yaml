@@ -1,0 +1,159 @@
+version: "3"
+
+vars:
+  APP: mdv
+  GUI_DIR: cmd/mdv-gui
+  TUI_DIR: cmd/mdv
+  TEST_FILE: test.md
+  GOPATH:
+    sh: go env GOPATH
+
+env:
+  CGO_ENABLED: "1" # Wails needs cgo
+
+tasks:
+  default:
+    desc: Build both TUI and GUI versions
+    deps: [build:all]
+
+  deps:
+    desc: Install/update dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  # === BUILD TASKS ===
+
+  build:tui:
+    desc: Build TUI binary to ./mdv
+    cmds:
+      - go build -o ./{{.APP}} ./{{.TUI_DIR}}
+      - echo "Built ./{{.APP}}"
+    sources:
+      - "{{.TUI_DIR}}/**/*.go"
+      - "internal/**/*.go"
+    generates:
+      - ./{{.APP}}
+
+  build:gui:
+    desc: Build GUI (Wails) binary
+    dir: "{{.GUI_DIR}}"
+    cmds:
+      - wails build
+      - echo "Built {{.GUI_DIR}}/build/bin/mdv-gui"
+    sources:
+      - "**/*.go"
+      - "frontend/**/*"
+    generates:
+      - build/bin/mdv-gui
+
+  build:all:
+    desc: Build both TUI and GUI
+    deps: [build:tui, build:gui]
+
+  # === RUN TASKS ===
+
+  run:tui:
+    desc: Run TUI viewer (use -- to pass args, e.g. task run:tui -- README.md)
+    cmds:
+      - go run ./{{.TUI_DIR}} {{.CLI_ARGS | default .TEST_FILE}}
+    silent: false
+
+  run:gui:
+    desc: Run GUI (Wails) viewer in dev mode
+    dir: "{{.GUI_DIR}}"
+    cmds:
+      - wails dev
+    silent: false
+
+  # === CLEAN TASKS ===
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -f ./{{.APP}}
+      - rm -rf {{.GUI_DIR}}/build
+      - rm -rf {{.GUI_DIR}}/frontend/wailsjs
+      - echo "Cleaned build artifacts"
+
+  # === INSTALL TASKS ===
+
+  install:tui:
+    desc: Install TUI to $GOPATH/bin/mdv
+    cmds:
+      - cd {{.TUI_DIR}} && go install
+      - echo "Installed {{.GOPATH}}/bin/{{.APP}}"
+
+  install:gui:
+    desc: Install GUI to $GOPATH/bin/mdv-gui
+    deps: [build:gui]
+    cmds:
+      - cp {{.GUI_DIR}}/build/bin/mdv-gui {{.GOPATH}}/bin/
+      - echo "Installed {{.GOPATH}}/bin/mdv-gui"
+
+  install:all:
+    desc: Install both TUI and GUI
+    deps: [install:tui, install:gui]
+
+  # === WATCH TASKS ===
+
+  watch:
+    desc: Run TUI with built-in file watching (press 'r' to reload)
+    cmds:
+      - go run ./{{.TUI_DIR}} --watch {{.CLI_ARGS | default .TEST_FILE}}
+
+  # === TEST TASKS ===
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./...
+
+  test:cover:
+    desc: Run tests with coverage
+    cmds:
+      - go test -v -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+      - echo "Coverage report generated at coverage.html"
+
+  # === LINT/FORMAT TASKS ===
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - go fmt ./...
+      - echo "Code formatted"
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run
+    preconditions:
+      - sh: command -v golangci-lint
+        msg: "Install golangci-lint: brew install golangci-lint"
+
+  # === RELEASE TASKS ===
+
+  release:
+    desc: Create release artifacts via GoReleaser
+    cmds:
+      - goreleaser release --clean
+    preconditions:
+      - sh: command -v goreleaser
+        msg: "Install GoReleaser: brew install goreleaser"
+
+  release:snapshot:
+    desc: Build snapshot release (no publish)
+    cmds:
+      - goreleaser release --snapshot --clean
+    preconditions:
+      - sh: command -v goreleaser
+        msg: "Install GoReleaser: brew install goreleaser"
+
+  # === HELP ===
+
+  help:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true

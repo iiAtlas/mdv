@@ -36,3 +36,13 @@ wails_build.log
 
 # Local config files
 .mdv.yaml
+
+# Makefile backup
+Makefile.backup
+
+# Task runner cache
+.task/
+
+# Coverage reports
+coverage.html
+coverage.out
