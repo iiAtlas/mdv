@@ -347,7 +347,7 @@ func watchFile(path, theme string, p *tea.Program) {
 }
 
 func init() {
-	rootCmd.Flags().StringP("theme", "t", "dark", "Theme for rendering (dark, light, auto)")
+	rootCmd.Flags().StringP("theme", "t", "auto", "Theme for rendering (dark, light, auto)")
 	rootCmd.Flags().IntP("wrap", "w", 80, "Wrap width for terminal rendering")
 	rootCmd.Flags().BoolP("gui", "g", false, "Open in GUI mode (use mdv-gui instead)")
 	rootCmd.Flags().Bool("watch", false, "Auto-reload on file change")

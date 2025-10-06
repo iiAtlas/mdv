@@ -2,6 +2,10 @@ package render
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/yuin/goldmark"
@@ -25,6 +29,47 @@ var md = goldmark.New(
 	),
 )
 
+// detectSystemTheme detects the system's dark/light mode preference
+func detectSystemTheme() string {
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS: check AppleInterfaceStyle
+		cmd := exec.Command("defaults", "read", "-g", "AppleInterfaceStyle")
+		output, err := cmd.Output()
+		if err == nil && strings.TrimSpace(string(output)) == "Dark" {
+			return "dark"
+		}
+		return "light"
+	case "linux":
+		// Linux: check COLORFGBG environment variable
+		// Format is typically "15;0" (light fg on dark bg) or "0;15" (dark fg on light bg)
+		if colorfgbg := os.Getenv("COLORFGBG"); colorfgbg != "" {
+			parts := strings.Split(colorfgbg, ";")
+			if len(parts) == 2 {
+				// If background is dark (0-8), use dark theme
+				bg := parts[1]
+				if bg >= "0" && bg <= "8" {
+					return "dark"
+				}
+				return "light"
+			}
+		}
+		// Default to dark for Linux
+		return "dark"
+	default:
+		// Default to dark for other platforms
+		return "dark"
+	}
+}
+
+// ResolveTheme resolves "auto" to the system theme, or returns the theme as-is
+func ResolveTheme(theme string) string {
+	if theme == "auto" {
+		return detectSystemTheme()
+	}
+	return theme
+}
+
 func ToHTML(src []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := md.Convert(src, &buf); err != nil {
@@ -34,5 +79,6 @@ func ToHTML(src []byte) ([]byte, error) {
 }
 
 func ToANSI(src []byte, theme string) (string, error) {
-	return glamour.Render(string(src), theme)
+	resolvedTheme := ResolveTheme(theme)
+	return glamour.Render(string(src), resolvedTheme)
 }

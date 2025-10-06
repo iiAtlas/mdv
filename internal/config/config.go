@@ -23,7 +23,7 @@ func NewViper() *viper.Viper {
 	v := viper.New()
 
 	// 1) Built-in defaults
-	v.SetDefault("theme", "dark")
+	v.SetDefault("theme", "auto")
 	v.SetDefault("wrap", 80)
 	v.SetDefault("gui", false)
 	v.SetDefault("watch", false)
