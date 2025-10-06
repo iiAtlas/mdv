@@ -92,6 +92,53 @@ func (m model) footerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info, help)
 }
 
+// pickerModel is a simple file picker
+type pickerModel struct {
+	files    []string
+	cursor   int
+	selected string
+}
+
+func (p pickerModel) Init() tea.Cmd {
+	return nil
+}
+
+func (p pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "ctrl+c", "esc":
+			return p, tea.Quit
+		case "up", "k":
+			if p.cursor > 0 {
+				p.cursor--
+			}
+		case "down", "j":
+			if p.cursor < len(p.files)-1 {
+				p.cursor++
+			}
+		case "enter":
+			p.selected = p.files[p.cursor]
+			return p, tea.Quit
+		}
+	}
+	return p, nil
+}
+
+func (p pickerModel) View() string {
+	s := "Select a markdown file:\n\n"
+	for i, file := range p.files {
+		cursor := " "
+		if p.cursor == i {
+			cursor = ">"
+			file = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Render(file)
+		}
+		s += fmt.Sprintf(" %s %s\n", cursor, file)
+	}
+	s += "\n" + lipgloss.NewStyle().Faint(true).Render("↑/↓: navigate • enter: select • q: quit")
+	return s
+}
+
 type reloadMsg string
 
 func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
@@ -108,11 +155,31 @@ func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
 	}
 }
 
+// findMarkdownFiles returns all markdown files in the current directory (non-recursive)
+func findMarkdownFiles() ([]string, error) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		return nil, err
+	}
+
+	var files []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, ".md") || strings.HasSuffix(name, ".markdown") {
+			files = append(files, name)
+		}
+	}
+	return files, nil
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "mdv [file.md]",
 	Short: "Markdown viewer with TUI",
 	Long:  `A terminal-based markdown viewer with support for themes, auto-reload, and GUI mode.`,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize Viper
 		v := config.NewViper()
@@ -122,8 +189,39 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to bind flags: %w", err)
 		}
 
+		// Auto-detect markdown file if no args provided
+		var fileArg string
+		if len(args) == 0 {
+			files, err := findMarkdownFiles()
+			if err != nil {
+				return fmt.Errorf("failed to scan directory: %w", err)
+			}
+			if len(files) == 0 {
+				return fmt.Errorf("no markdown files found in current directory")
+			}
+			if len(files) == 1 {
+				// Auto-select the only file
+				fileArg = files[0]
+			} else {
+				// Multiple files found, show picker
+				picker := pickerModel{files: files}
+				p := tea.NewProgram(picker)
+				finalModel, err := p.Run()
+				if err != nil {
+					return fmt.Errorf("error running picker: %w", err)
+				}
+				pickerResult := finalModel.(pickerModel)
+				if pickerResult.selected == "" {
+					return fmt.Errorf("no file selected")
+				}
+				fileArg = pickerResult.selected
+			}
+		} else {
+			fileArg = args[0]
+		}
+
 		// Decode config
-		cfg, err := config.Decode(v, args[0])
+		cfg, err := config.Decode(v, fileArg)
 		if err != nil {
 			return fmt.Errorf("invalid config: %w", err)
 		}
