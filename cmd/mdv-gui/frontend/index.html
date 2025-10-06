@@ -20,6 +20,21 @@
         console.error(e);
       }
     });
+
+    // Intercept link clicks and open external links in default browser
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('a');
+      if (!target) return;
+
+      const href = target.getAttribute('href');
+      if (!href) return;
+
+      // Open external links (http/https) in default browser
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        e.preventDefault();
+        window.go.main.App.OpenURL(href);
+      }
+    });
   </script>
 </body>
 </html>

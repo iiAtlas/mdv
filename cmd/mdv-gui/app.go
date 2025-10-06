@@ -58,3 +58,8 @@ func (a *App) load(path string) error {
 
 // GetHTML is exposed to JS
 func (a *App) GetHTML() string { return a.html }
+
+// OpenURL opens a URL in the default browser
+func (a *App) OpenURL(url string) {
+	runtime.BrowserOpenURL(a.ctx, url)
+}
