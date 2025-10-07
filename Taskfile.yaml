@@ -7,6 +7,16 @@ vars:
   TEST_FILE: test.md
   GOPATH:
     sh: go env GOPATH
+  GOBIN:
+    sh: go env GOBIN
+  BIN_DIR:
+    sh: |
+      gobin=$(go env GOBIN)
+      if [ -n "$gobin" ]; then
+        echo "$gobin"
+      else
+        echo "$(go env GOPATH)/bin"
+      fi
 
 env:
   CGO_ENABLED: "1" # Wails needs cgo
@@ -92,41 +102,49 @@ tasks:
   # === INSTALL TASKS ===
 
   install:tui:
-    desc: Install TUI to $GOPATH/bin/mdv
+    desc: Install TUI to bin directory
     cmds:
       - cd {{.TUI_DIR}} && go install
-      - echo "Installed {{.GOPATH}}/bin/{{.APP}}"
+      - echo "Installed {{trim .BIN_DIR}}/{{.APP}}"
 
   install:gui:
-    desc: Install GUI to $GOPATH/bin/mdv-gui
+    desc: Install GUI to bin directory
     deps: [build:gui]
     platforms: [darwin, linux, windows]
     cmds:
       - |
+        BIN_DIR="{{trim .BIN_DIR}}"
+        mkdir -p "$BIN_DIR"
         {{if eq OS "darwin"}}
-        cp {{.GUI_DIR}}/build/bin/mdv-gui.app/Contents/MacOS/mdv-gui {{.GOPATH}}/bin/
+        rm -f "$BIN_DIR/mdv-gui"
+        rm -rf "$BIN_DIR/mdv-gui.app"
+        cp -R "{{.GUI_DIR}}/build/bin/mdv-gui.app" "$BIN_DIR/"
+        ln -sf "$BIN_DIR/mdv-gui.app/Contents/MacOS/mdv-gui" "$BIN_DIR/mdv-gui"
         {{else if eq OS "windows"}}
-        cp {{.GUI_DIR}}/build/bin/mdv-gui.exe {{.GOPATH}}/bin/
+        rm -f "$BIN_DIR/mdv-gui.exe"
+        cp "{{.GUI_DIR}}/build/bin/mdv-gui.exe" "$BIN_DIR/"
         {{else}}
-        cp {{.GUI_DIR}}/build/bin/mdv-gui {{.GOPATH}}/bin/
+        rm -f "$BIN_DIR/mdv-gui"
+        cp "{{.GUI_DIR}}/build/bin/mdv-gui" "$BIN_DIR/"
         {{end}}
-      - echo "Installed {{.GOPATH}}/bin/mdv-gui"
+      - echo "Installed {{trim .BIN_DIR}}/mdv-gui{{if eq OS "windows"}}.exe{{end}}"
 
   install:all:
     desc: Install both TUI and GUI
     deps: [install:tui, install:gui]
 
   uninstall:tui:
-    desc: Uninstall TUI from $GOPATH/bin/mdv
+    desc: Uninstall TUI from bin directory
     cmds:
-      - rm -f {{.GOPATH}}/bin/{{.APP}}
-      - echo "Uninstalled {{.GOPATH}}/bin/{{.APP}}"
+      - rm -f "{{trim .BIN_DIR}}/{{.APP}}"
+      - echo "Uninstalled {{trim .BIN_DIR}}/{{.APP}}"
 
   uninstall:gui:
-    desc: Uninstall GUI from $GOPATH/bin/mdv-gui
+    desc: Uninstall GUI from bin directory
     cmds:
-      - rm -f {{.GOPATH}}/bin/mdv-gui
-      - echo "Uninstalled {{.GOPATH}}/bin/mdv-gui"
+      - rm -f "{{trim .BIN_DIR}}/mdv-gui" "{{trim .BIN_DIR}}/mdv-gui.exe"
+      - rm -rf "{{trim .BIN_DIR}}/mdv-gui.app"
+      - echo "Uninstalled {{trim .BIN_DIR}}/mdv-gui"
 
   uninstall:all:
     desc: Uninstall both TUI and GUI
