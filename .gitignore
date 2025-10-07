@@ -35,9 +35,6 @@ cmd/mdv-gui/frontend/wailsjs/
 cmd/mdv-gui/frontend/dist/
 wails_build.log
 
-# Local config files
-.mdv.yaml
-
 # Makefile backup
 Makefile.backup
 

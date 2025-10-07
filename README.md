@@ -99,6 +99,7 @@ mdv -t dark document.md
 | `g` / `Home` | Jump to top |
 | `G` / `End` | Jump to bottom |
 | `r` | Reload file |
+| `e` | Open in editor |
 | `o` | Open in GUI mode |
 | `q` / `Esc` / `Ctrl+C` | Quit |
 
@@ -151,6 +152,12 @@ mdv --exclude "README.md,draft-*.md" ~/notes/
 
 **Note:** In TUI mode, the picker is single-select. In GUI mode (`-g`), you can stage multiple files with `space` and open them all.
 
+**GUI Keyboard Shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `e` | Open in editor |
+
 ## Configuration
 
 mdv can be configured through multiple sources (in order of precedence):
@@ -178,6 +185,10 @@ watch: false
 # Open in GUI mode by default
 gui: false
 
+# Editor to use when pressing 'e' (defaults to $EDITOR or vim)
+# Examples: vim, nvim, nano, code, "code --wait", "subl -w"
+editor: code
+
 # Exclude files when scanning directories (glob patterns)
 exclude:
   - README.md
@@ -192,6 +203,7 @@ export MDV_THEME=dark
 export MDV_WRAP=100
 export MDV_WATCH=true
 export MDV_GUI=false
+export MDV_EDITOR=code
 export MDV_EXCLUDE="README.md,draft-*.md"
 ```
 
@@ -204,6 +216,7 @@ Usage:
   mdv [file.md|directory...]
 
 Flags:
+      --editor string     Editor command to open files (defaults to $EDITOR or vim)
   -e, --exclude strings   Glob patterns for files to exclude (comma-separated)
   -g, --gui               Open in GUI mode (use mdv-gui instead)
   -h, --help              help for mdv
