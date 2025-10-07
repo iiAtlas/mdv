@@ -114,16 +114,17 @@ func ToHTML(src []byte, theme, themeLight, themeDark, width string) ([]byte, err
 	maxWidth := getMaxWidth(width)
 	var widthCSS string
 	if maxWidth != "" {
-		widthCSS = fmt.Sprintf(".markdown-body { max-width: %s; margin-left: auto; margin-right: auto; }\n", maxWidth)
+		widthCSS = fmt.Sprintf(".markdown-body { max-width: %s; margin-left: auto !important; margin-right: auto !important; }\n", maxWidth)
 	}
 
 	// Wrap the HTML with the CSS theme and markdown-body container
 	var output bytes.Buffer
 	output.WriteString("<style>\n")
 	output.WriteString(bodyCSS)
-	output.WriteString(widthCSS)
 	output.WriteString(css)
-	output.WriteString("\n</style>\n")
+	output.WriteString("\n")
+	output.WriteString(widthCSS) // Width CSS comes last to override any theme margins
+	output.WriteString("</style>\n")
 	output.WriteString(`<div class="markdown-body">` + "\n")
 	output.Write(buf.Bytes())
 	output.WriteString("\n</div>")
