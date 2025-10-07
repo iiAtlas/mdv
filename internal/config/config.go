@@ -11,11 +11,12 @@ import (
 
 // Config is what the rest of your app reads.
 type Config struct {
-	Theme string // "dark", "light", "auto", or custom
-	Wrap  int    // wrap width for terminal rendering
-	GUI   bool   // open GUI (Wails) instead of TUI
-	Watch bool   // auto-reload on file change
-	File  string // markdown file path (positional arg)
+	Theme   string   // "dark", "light", "auto", or custom
+	Wrap    int      // wrap width for terminal rendering
+	GUI     bool     // open GUI (Wails) instead of TUI
+	Watch   bool     // auto-reload on file change
+	Exclude []string // glob patterns for files to exclude
+	File    string   // markdown file path (positional arg)
 }
 
 // NewViper sets up Viper with sensible defaults and search paths.
@@ -27,6 +28,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("wrap", 80)
 	v.SetDefault("gui", false)
 	v.SetDefault("watch", false)
+	v.SetDefault("exclude", []string{})
 
 	// 2) Local config: ./.mdv.yaml
 	v.SetConfigName(".mdv")
@@ -64,17 +66,21 @@ func BindFlags(v *viper.Viper, fs *pflag.FlagSet) error {
 	if err := bind("watch", "watch"); err != nil {
 		return err
 	}
+	if err := bind("exclude", "exclude"); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Decode pulls values from Viper into a typed Config.
 func Decode(v *viper.Viper, fileArg string) (Config, error) {
 	cfg := Config{
-		Theme: v.GetString("theme"),
-		Wrap:  v.GetInt("wrap"),
-		GUI:   v.GetBool("gui"),
-		Watch: v.GetBool("watch"),
-		File:  fileArg,
+		Theme:   v.GetString("theme"),
+		Wrap:    v.GetInt("wrap"),
+		GUI:     v.GetBool("gui"),
+		Watch:   v.GetBool("watch"),
+		Exclude: v.GetStringSlice("exclude"),
+		File:    fileArg,
 	}
 	if cfg.Wrap < 0 {
 		return cfg, fmt.Errorf("wrap must be >= 0")

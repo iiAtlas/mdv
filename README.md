@@ -95,6 +95,7 @@ mdv -t dark document.md
 | `g` / `Home` | Jump to top |
 | `G` / `End` | Jump to bottom |
 | `r` | Reload file |
+| `o` | Open in GUI mode |
 | `q` / `Esc` / `Ctrl+C` | Quit |
 
 ### GUI Mode

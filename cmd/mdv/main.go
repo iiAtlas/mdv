@@ -43,7 +43,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			// Manual reload
 			return m, reloadFileCmd(m.filePath, m.cfg)
+		case "o":
+			// Open in GUI
+			return m, openInGUICmd(m.filePath)
 		}
+
+	case openGUIMsg:
+		// GUI launched, quit TUI
+		return m, tea.Quit
 
 	case reloadMsg:
 		m.content = string(msg)
@@ -87,7 +94,7 @@ func (m model) footerView() string {
 	info := lipgloss.NewStyle().Faint(true).Render(
 		fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100),
 	)
-	help := lipgloss.NewStyle().Faint(true).Render(" • ↑/↓: scroll • g/G: top/bottom • r: reload • q: quit")
+	help := lipgloss.NewStyle().Faint(true).Render(" • ↑/↓: scroll • g/G: top/bottom • r: reload • o: open in GUI • q: quit")
 
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)-lipgloss.Width(help)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info, help)
@@ -156,8 +163,27 @@ func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
 	}
 }
 
+type openGUIMsg struct{}
+
+func openInGUICmd(path string) tea.Cmd {
+	return func() tea.Msg {
+		// Try to find and launch mdv-gui
+		guiPath, err := exec.LookPath("mdv-gui")
+		if err != nil {
+			// mdv-gui not found, silently ignore
+			return nil
+		}
+
+		// Launch mdv-gui in the background
+		cmd := exec.Command(guiPath, path)
+		_ = cmd.Start()
+
+		return openGUIMsg{}
+	}
+}
+
 // findMarkdownFiles returns all markdown files in the specified directory (non-recursive)
-func findMarkdownFiles(dir string) ([]string, error) {
+func findMarkdownFiles(dir string, excludePatterns []string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -170,7 +196,22 @@ func findMarkdownFiles(dir string) ([]string, error) {
 		}
 		name := entry.Name()
 		if strings.HasSuffix(name, ".md") || strings.HasSuffix(name, ".markdown") {
-			files = append(files, name)
+			// Check if file matches any exclude pattern
+			excluded := false
+			for _, pattern := range excludePatterns {
+				matched, err := filepath.Match(pattern, name)
+				if err != nil {
+					// Invalid pattern, skip it
+					continue
+				}
+				if matched {
+					excluded = true
+					break
+				}
+			}
+			if !excluded {
+				files = append(files, name)
+			}
 		}
 	}
 	return files, nil
@@ -199,6 +240,9 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to bind flags: %w", err)
 		}
 
+		// Get exclude patterns early (needed for file scanning)
+		excludePatterns := v.GetStringSlice("exclude")
+
 		// Auto-detect markdown file if no args provided, or if arg is a directory
 		var fileArg string
 		var scanDir string
@@ -219,7 +263,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if needsScan {
-			files, err := findMarkdownFiles(scanDir)
+			files, err := findMarkdownFiles(scanDir, excludePatterns)
 			if err != nil {
 				return fmt.Errorf("failed to scan directory: %w", err)
 			}
@@ -351,6 +395,7 @@ func init() {
 	rootCmd.Flags().IntP("wrap", "w", 80, "Wrap width for terminal rendering")
 	rootCmd.Flags().BoolP("gui", "g", false, "Open in GUI mode (use mdv-gui instead)")
 	rootCmd.Flags().Bool("watch", false, "Auto-reload on file change")
+	rootCmd.Flags().StringSliceP("exclude", "e", []string{}, "Glob patterns for files to exclude (comma-separated)")
 }
 
 func main() {
