@@ -47,6 +47,22 @@
         window.go.main.App.OpenURL(href);
       }
     });
+
+    // Add keyboard shortcut for opening in editor (e key)
+    document.addEventListener('keydown', (e) => {
+      // Only trigger if 'e' is pressed without modifiers and not in an input/textarea
+      if (e.key === 'e' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        const target = e.target;
+        // Don't trigger if user is typing in an input or textarea
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        window.go.main.App.OpenInEditor().catch((err) => {
+          console.error('Failed to open editor:', err);
+        });
+      }
+    });
   </script>
 </body>
 </html>

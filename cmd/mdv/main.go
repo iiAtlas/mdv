@@ -17,11 +17,12 @@ import (
 )
 
 type model struct {
-	viewport viewport.Model
-	content  string
-	ready    bool
-	filePath string
-	cfg      config.Config
+	viewport       viewport.Model
+	content        string
+	ready          bool
+	filePath       string
+	cfg            config.Config
+	editorToLaunch *openEditorMsg // Store editor info if we need to launch after quit
 }
 
 func (m model) Init() tea.Cmd {
@@ -46,10 +47,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "o":
 			// Open in GUI
 			return m, openInGUICmd(m.filePath, m.cfg)
+		case "e":
+			// Open in editor
+			return m, openInEditorCmd(m.filePath, m.cfg)
 		}
 
 	case openGUIMsg:
 		// GUI launched, quit TUI
+		return m, tea.Quit
+
+	case openEditorMsg:
+		// Terminal editor requested, store info and quit TUI
+		if msg.isTerminal {
+			m.editorToLaunch = &msg
+		}
 		return m, tea.Quit
 
 	case reloadMsg:
@@ -94,7 +105,7 @@ func (m model) footerView() string {
 	info := lipgloss.NewStyle().Faint(true).Render(
 		fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100),
 	)
-	help := lipgloss.NewStyle().Faint(true).Render(" • ↑/↓: scroll • g/G: top/bottom • r: reload • o: open in GUI • q: quit")
+	help := lipgloss.NewStyle().Faint(true).Render(" • ↑/↓: scroll • g/G: top/bottom • r: reload • e: edit • o: open in GUI • q: quit")
 
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)-lipgloss.Width(help)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info, help)
@@ -223,6 +234,58 @@ func openInGUICmd(path string, cfg config.Config) tea.Cmd {
 		_ = cmd.Start()
 
 		return openGUIMsg{}
+	}
+}
+
+type openEditorMsg struct {
+	editorBinary string
+	args         []string
+	isTerminal   bool
+}
+
+func openInEditorCmd(path string, cfg config.Config) tea.Cmd {
+	return func() tea.Msg {
+		// Parse editor command (handle editors with arguments like "code --wait")
+		editorCmd := cfg.Editor
+		if editorCmd == "" {
+			return nil
+		}
+
+		// Simple split on spaces for command and args
+		parts := strings.Fields(editorCmd)
+		if len(parts) == 0 {
+			return nil
+		}
+
+		editorBinary := parts[0]
+		args := parts[1:]
+		args = append(args, path)
+
+		// Check if editor is terminal-based or GUI-based
+		// Terminal editors: vim, vi, nvim, nano, emacs (terminal), ed, etc.
+		terminalEditors := []string{"vim", "vi", "nvim", "nano", "emacs", "ed", "joe", "micro", "helix", "hx"}
+		isTerminalEditor := false
+		for _, te := range terminalEditors {
+			if strings.Contains(editorBinary, te) {
+				isTerminalEditor = true
+				break
+			}
+		}
+
+		if isTerminalEditor {
+			// For terminal editors, we need to quit the TUI and exec the editor
+			return openEditorMsg{
+				editorBinary: editorBinary,
+				args:         args,
+				isTerminal:   true,
+			}
+		}
+
+		// For GUI editors, launch in background
+		cmd := exec.Command(editorBinary, args...)
+		_ = cmd.Start()
+
+		return nil
 	}
 }
 
@@ -448,8 +511,20 @@ var rootCmd = &cobra.Command{
 			go watchFile(cfg.File, cfg.Theme, p)
 		}
 
-		if _, err := p.Run(); err != nil {
+		finalModel, err := p.Run()
+		if err != nil {
 			return fmt.Errorf("error running program: %w", err)
+		}
+
+		// Check if we need to launch a terminal editor
+		if m, ok := finalModel.(model); ok && m.editorToLaunch != nil {
+			cmd := exec.Command(m.editorToLaunch.editorBinary, m.editorToLaunch.args...)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error launching editor: %v\n", err)
+			}
 		}
 
 		return nil
@@ -499,6 +574,7 @@ func init() {
 	rootCmd.Flags().BoolP("gui", "g", false, "Open in GUI mode (use mdv-gui instead)")
 	rootCmd.Flags().Bool("watch", false, "Auto-reload on file change")
 	rootCmd.Flags().StringSliceP("exclude", "e", []string{}, "Glob patterns for files to exclude (comma-separated)")
+	rootCmd.Flags().String("editor", "", "Editor command to open files (defaults to $EDITOR or vim)")
 }
 
 func main() {

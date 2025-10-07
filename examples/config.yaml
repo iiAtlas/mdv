@@ -20,6 +20,11 @@ gui: false
 # Useful for live preview while editing
 watch: false
 
+# Editor to use when pressing 'e' in TUI or GUI
+# Defaults to $EDITOR environment variable, or "vim" if not set
+# Examples: "vim", "nvim", "nano", "code", "code --wait", "subl -w"
+# editor: code
+
 # Files you want explicitely excluded
 # exclude:
 # - file-you-dont-want.md

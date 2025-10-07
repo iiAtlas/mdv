@@ -83,6 +83,7 @@ func init() {
 	rootCmd.Flags().Bool("watch", false, "Auto-reload on file change")
 	rootCmd.Flags().StringSliceP("exclude", "e", []string{}, "Glob patterns for files to exclude (comma-separated)")
 	rootCmd.Flags().BoolP("gui", "g", false, "GUI mode (always true for mdv-gui)")
+	rootCmd.Flags().String("editor", "", "Editor command to open files (defaults to $EDITOR or vim)")
 }
 
 func main() {

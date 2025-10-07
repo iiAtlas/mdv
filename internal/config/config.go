@@ -17,6 +17,7 @@ type Config struct {
 	Watch   bool     // auto-reload on file change
 	Exclude []string // glob patterns for files to exclude
 	File    string   // markdown file path (positional arg)
+	Editor  string   // editor command to open files (defaults to $EDITOR or "vim")
 }
 
 // NewViper sets up Viper with sensible defaults and search paths.
@@ -29,6 +30,13 @@ func NewViper() *viper.Viper {
 	v.SetDefault("gui", false)
 	v.SetDefault("watch", false)
 	v.SetDefault("exclude", []string{})
+
+	// Default editor: check $EDITOR, fallback to "vim"
+	defaultEditor := os.Getenv("EDITOR")
+	if defaultEditor == "" {
+		defaultEditor = "vim"
+	}
+	v.SetDefault("editor", defaultEditor)
 
 	// 2) Local config: ./.mdv.yaml
 	v.SetConfigName(".mdv")
@@ -69,6 +77,9 @@ func BindFlags(v *viper.Viper, fs *pflag.FlagSet) error {
 	if err := bind("exclude", "exclude"); err != nil {
 		return err
 	}
+	if err := bind("editor", "editor"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -97,6 +108,7 @@ func Decode(v *viper.Viper, fileArg string) (Config, error) {
 		Watch:   v.GetBool("watch"),
 		Exclude: v.GetStringSlice("exclude"),
 		File:    fileArg,
+		Editor:  v.GetString("editor"),
 	}
 	if cfg.Wrap < 0 {
 		return cfg, fmt.Errorf("wrap must be >= 0")

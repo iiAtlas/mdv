@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"os/exec"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/iiatlas/mdv/internal/config"
@@ -75,6 +76,65 @@ func (a *App) GetHTML() string { return a.html }
 // OpenURL opens a URL in the default browser
 func (a *App) OpenURL(url string) {
 	runtime.BrowserOpenURL(a.ctx, url)
+}
+
+// OpenInEditor opens the current file in the configured editor
+func (a *App) OpenInEditor() error {
+	if a.cfg.File == "" {
+		return nil
+	}
+
+	// Parse editor command
+	editorCmd := a.cfg.Editor
+	if editorCmd == "" {
+		return nil
+	}
+
+	// Simple split on spaces for command and args
+	parts := []string{}
+	for _, part := range splitCommand(editorCmd) {
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+
+	editorBinary := parts[0]
+	args := parts[1:]
+	args = append(args, a.cfg.File)
+
+	// Launch editor in background (GUI editors work best here)
+	cmd := exec.Command(editorBinary, args...)
+	return cmd.Start()
+}
+
+// splitCommand splits a command string on spaces (simple implementation)
+func splitCommand(cmd string) []string {
+	var parts []string
+	var current string
+	inQuote := false
+
+	for _, r := range cmd {
+		switch r {
+		case '"':
+			inQuote = !inQuote
+		case ' ':
+			if inQuote {
+				current += string(r)
+			} else if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		default:
+			current += string(r)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+	return parts
 }
 
 // Reload reloads the current file and returns the new HTML
