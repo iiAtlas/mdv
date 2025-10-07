@@ -12,7 +12,7 @@ theme: auto
 wrap: 80
 
 # Open in GUI mode by default
-# Note: You should still use the mdv-gui command for GUI mode
+# When set to true, running `mdv` will automatically launch mdv-gui
 gui: false
 
 # Auto-reload on file changes

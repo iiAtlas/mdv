@@ -67,8 +67,9 @@ task clean
 3. **internal/config/** - Configuration system
    - Uses Viper for layered config (flags > directory .mdv.yaml > local .mdv.yaml > ~/.config/mdv/config.yaml > env vars)
    - Directory-specific configs: when viewing a file, mdv checks for .mdv.yaml in that file's directory
-   - Environment variables: MDV_THEME, MDV_THEME_LIGHT, MDV_THEME_DARK, MDV_WRAP, MDV_WATCH, MDV_GUI, MDV_EXCLUDE
+   - Environment variables: MDV_THEME, MDV_THEME_LIGHT, MDV_THEME_DARK, MDV_WRAP, MDV_WATCH, MDV_GUI, MDV_EXCLUDE, MDV_EDITOR
    - Config struct: Theme, ThemeLight, ThemeDark, Wrap, GUI, Watch, Exclude, File, Editor
+   - Setting `gui: true` in config makes `mdv` launch in GUI mode by default (equivalent to `-g` flag)
 
 4. **internal/render/** - Markdown rendering
    - `ToANSI()`: Converts markdown to ANSI for terminal (uses Glamour)
