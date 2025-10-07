@@ -173,7 +173,7 @@ mdv can be configured through multiple sources (in order of precedence):
 Create a `.mdv.yaml` file in your project or home directory:
 
 ```yaml
-# Theme: auto, dark, light, notty, dracula, pink, tokyo-night
+# Theme: auto, dark, light, notty, dracula, pink, tokyo-night, or path to custom JSON theme
 theme: auto
 
 # Override themes for light/dark mode when theme is "auto"
@@ -253,6 +253,56 @@ theme-dark: tokyo-night # Use 'tokyo-night' theme when system is in dark mode
 ```
 
 This allows you to have personalized themes that automatically switch with your system appearance while still benefiting from auto-detection.
+
+#### Custom Theme JSON Files
+
+You can create your own custom themes using Glamour's JSON theme format. Theme values can be either built-in theme names or paths to custom JSON theme files:
+
+```yaml
+# Use a built-in theme
+theme: dark
+
+# Use an absolute path to a custom theme file
+theme: /Users/me/.config/mdv/themes/custom.json
+
+# Use a relative path (resolved relative to the config file's directory)
+theme: ./themes/mytheme.json
+
+# Use home directory expansion
+theme: ~/.config/mdv/themes/ocean.json
+
+# Works with auto mode too
+theme: auto
+theme-light: ~/themes/light-custom.json
+theme-dark: ~/themes/dark-custom.json
+```
+
+**Note on relative paths:** When using relative paths in a config file (e.g., `.mdv.yaml`), the path is resolved relative to the directory containing that config file, not relative to your current working directory. For example, if you have `examples/.mdv.yaml` with `theme: ./ocean-theme.json`, mdv will look for `examples/ocean-theme.json`.
+
+**Creating Custom Themes:**
+
+Custom theme files use JSON format and define colors and styles for different markdown elements. See [Glamour's style documentation](https://github.com/charmbracelet/glamour/tree/master/styles) for the complete schema and built-in theme examples.
+
+Example custom theme structure:
+
+```json
+{
+  "document": {
+    "color": "252"
+  },
+  "heading": {
+    "color": "39",
+    "bold": true
+  },
+  "paragraph": {},
+  "code_block": {
+    "color": "244",
+    "background_color": "236"
+  }
+}
+```
+
+You can start by copying an existing theme from the [Glamour styles directory](https://github.com/charmbracelet/glamour/tree/master/styles) and modifying it to your preferences.
 
 ## Building from Source
 

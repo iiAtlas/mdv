@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -93,7 +94,25 @@ func ToHTML(src []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ToANSI(src []byte, theme, themeLight, themeDark string) (string, error) {
+func ToANSI(src []byte, theme, themeLight, themeDark string, wrap int) (string, error) {
 	resolvedTheme := ResolveTheme(theme, themeLight, themeDark)
-	return glamour.Render(string(src), resolvedTheme)
+
+	// Expand ~ in theme path for convenience
+	if strings.HasPrefix(resolvedTheme, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			resolvedTheme = filepath.Join(home, resolvedTheme[2:])
+		}
+	}
+
+	// Use NewTermRenderer with WithStylePath to support both built-in themes
+	// and custom JSON theme files
+	r, err := glamour.NewTermRenderer(
+		glamour.WithStylePath(resolvedTheme),
+		glamour.WithWordWrap(wrap),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return r.Render(string(src))
 }

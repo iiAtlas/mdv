@@ -12,7 +12,11 @@
 # ============================================================
 
 # Theme for markdown rendering
-# Options: "dark", "light", "auto", "notty", "dracula", "pink", "tokyo-night"
+# Built-in themes: "dark", "light", "auto", "notty", "dracula", "pink", "tokyo-night"
+# Or use a path to a custom JSON theme file:
+#   - Absolute path: /path/to/theme.json
+#   - Home path: ~/themes/custom.json
+#   - Relative path: ./themes/custom.json (resolved relative to this config file's directory)
 theme: auto
 
 # Override themes for light/dark mode when theme is set to "auto"
@@ -21,6 +25,9 @@ theme: auto
 # Leave empty to use default "light" and "dark" themes
 # theme-light: notty
 # theme-dark: tokyo-night
+# Or use custom theme files:
+# theme-light: ~/.config/mdv/themes/light-custom.json
+# theme-dark: ~/.config/mdv/themes/dark-custom.json
 
 # ============================================================
 # DISPLAY SETTINGS

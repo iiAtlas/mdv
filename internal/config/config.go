@@ -103,12 +103,44 @@ func MergeDirectoryConfig(v *viper.Viper, dir string) {
 	}
 }
 
+// resolveThemePath resolves a theme path relative to the config directory.
+// If the path is absolute or home-relative (~), returns it as-is.
+// If the path is relative, tries to resolve it relative to configDir.
+// If the resolved file exists, returns the absolute path; otherwise returns the original path.
+func resolveThemePath(themePath, configDir string) string {
+	if themePath == "" {
+		return themePath
+	}
+
+	// If absolute path or starts with ~, return as-is (will be handled by render package)
+	if filepath.IsAbs(themePath) || themePath[0] == '~' {
+		return themePath
+	}
+
+	// If relative path, try to resolve relative to config directory
+	resolvedPath := filepath.Join(configDir, themePath)
+
+	// Check if the resolved path exists
+	if _, err := os.Stat(resolvedPath); err == nil {
+		// File exists, return absolute path
+		absPath, err := filepath.Abs(resolvedPath)
+		if err == nil {
+			return absPath
+		}
+	}
+
+	// File doesn't exist or error getting absolute path, return original
+	// (might be a built-in theme name)
+	return themePath
+}
+
 // Decode pulls values from Viper into a typed Config.
-func Decode(v *viper.Viper, fileArg string) (Config, error) {
+// configDir is the directory containing the config file being used (typically the directory of the file being viewed).
+func Decode(v *viper.Viper, fileArg string, configDir string) (Config, error) {
 	cfg := Config{
-		Theme:      v.GetString("theme"),
-		ThemeLight: v.GetString("theme-light"),
-		ThemeDark:  v.GetString("theme-dark"),
+		Theme:      resolveThemePath(v.GetString("theme"), configDir),
+		ThemeLight: resolveThemePath(v.GetString("theme-light"), configDir),
+		ThemeDark:  resolveThemePath(v.GetString("theme-dark"), configDir),
 		Wrap:       v.GetInt("wrap"),
 		GUI:        v.GetBool("gui"),
 		Watch:      v.GetBool("watch"),

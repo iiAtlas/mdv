@@ -45,8 +45,12 @@ var rootCmd = &cobra.Command{
 			config.MergeDirectoryConfig(v, filepath.Dir(path))
 		}
 
-		// Decode config
-		cfg, err := config.Decode(v, path)
+		// Decode config (pass directory of file being viewed for relative theme path resolution)
+		configDir := "."
+		if path != "" {
+			configDir = filepath.Dir(path)
+		}
+		cfg, err := config.Decode(v, path, configDir)
 		if err != nil {
 			return fmt.Errorf("invalid config: %w", err)
 		}

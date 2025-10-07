@@ -4,6 +4,7 @@
 
 # Theme for markdown rendering
 # Options: "dark", "light", "auto", "notty", "dracula", "pink", "tokyo-night"
+# Or use a relative path to a custom theme JSON file like "./ocean-theme.json"
 theme: auto
 
 # Text wrap width for terminal rendering

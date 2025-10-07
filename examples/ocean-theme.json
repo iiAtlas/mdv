@@ -1,0 +1,147 @@
+{
+  "document": {
+    "color": "253",
+    "margin": 2
+  },
+  "block_quote": {
+    "color": "244",
+    "indent": 2,
+    "indent_token": "│ "
+  },
+  "paragraph": {},
+  "list": {
+    "level_indent": 2,
+    "color": "253"
+  },
+  "heading": {
+    "color": "39",
+    "bold": true,
+    "block_suffix": "\n"
+  },
+  "h1": {
+    "color": "33",
+    "bold": true,
+    "prefix": "# "
+  },
+  "h2": {
+    "color": "39",
+    "bold": true,
+    "prefix": "## "
+  },
+  "h3": {
+    "color": "38",
+    "prefix": "### "
+  },
+  "h4": {
+    "color": "37",
+    "prefix": "#### "
+  },
+  "h5": {
+    "color": "36",
+    "prefix": "##### "
+  },
+  "h6": {
+    "color": "35",
+    "prefix": "###### "
+  },
+  "text": {},
+  "strikethrough": {
+    "crossed_out": true
+  },
+  "emph": {
+    "italic": true,
+    "color": "117"
+  },
+  "strong": {
+    "bold": true,
+    "color": "159"
+  },
+  "hr": {
+    "color": "240",
+    "format": "\n────────────────────────────────────────────────────────\n"
+  },
+  "item": {
+    "block_prefix": "• "
+  },
+  "enumeration": {
+    "block_prefix": ". ",
+    "color": "39"
+  },
+  "task": {
+    "ticked": "[✓] ",
+    "unticked": "[ ] "
+  },
+  "link": {
+    "color": "39",
+    "underline": true
+  },
+  "link_text": {
+    "color": "117"
+  },
+  "image": {
+    "color": "117"
+  },
+  "image_text": {
+    "color": "244"
+  },
+  "code": {
+    "color": "159",
+    "background_color": "236"
+  },
+  "code_block": {
+    "color": "253",
+    "background_color": "236",
+    "margin": 2,
+    "chroma": {
+      "text": {
+        "color": "#D0D0D0"
+      },
+      "error": {
+        "color": "#FF5F5F",
+        "background_color": "#5F0000"
+      },
+      "comment": {
+        "color": "#808080"
+      },
+      "keyword": {
+        "color": "#00AFFF"
+      },
+      "name": {
+        "color": "#87D7FF"
+      },
+      "literal": {
+        "color": "#87D7AF"
+      },
+      "operator": {
+        "color": "#D0D0D0"
+      },
+      "punctuation": {
+        "color": "#585858"
+      },
+      "name_builtin": {
+        "color": "#00AFFF"
+      },
+      "name_function": {
+        "color": "#5FDFFF"
+      },
+      "literal_string": {
+        "color": "#87D7AF"
+      },
+      "literal_number": {
+        "color": "#87D7FF"
+      }
+    }
+  },
+  "table": {
+    "center_separator": "┼",
+    "column_separator": "│",
+    "row_separator": "─"
+  },
+  "definition_list": {},
+  "definition_term": {},
+  "definition_description": {
+    "block_prefix": "\n🠶 "
+  },
+  "html_block": {},
+  "html_span": {}
+}
