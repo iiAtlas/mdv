@@ -240,9 +240,6 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to bind flags: %w", err)
 		}
 
-		// Get exclude patterns early (needed for file scanning)
-		excludePatterns := v.GetStringSlice("exclude")
-
 		// Auto-detect markdown file if no args provided, or if arg is a directory
 		var fileArg string
 		var scanDir string
@@ -260,7 +257,17 @@ var rootCmd = &cobra.Command{
 			// Arg is a file path
 			fileArg = args[0]
 			needsScan = false
+			// Also check for config in the file's directory
+			config.MergeDirectoryConfig(v, filepath.Dir(fileArg))
 		}
+
+		// If scanning a directory, merge directory-specific config (if it exists)
+		if needsScan {
+			config.MergeDirectoryConfig(v, scanDir)
+		}
+
+		// Get exclude patterns (after merging directory config)
+		excludePatterns := v.GetStringSlice("exclude")
 
 		if needsScan {
 			files, err := findMarkdownFiles(scanDir, excludePatterns)

@@ -19,3 +19,8 @@ gui: false
 # Auto-reload on file changes
 # Useful for live preview while editing
 watch: false
+
+# Files you want explicitely excluded
+# exclude:
+# - file-you-dont-want.md
+# - "*-tmp.md"

@@ -72,6 +72,22 @@ func BindFlags(v *viper.Viper, fs *pflag.FlagSet) error {
 	return nil
 }
 
+// MergeDirectoryConfig loads a .mdv.yaml from the specified directory if it exists.
+// This allows directory-specific configurations when viewing files in that directory.
+func MergeDirectoryConfig(v *viper.Viper, dir string) {
+	// Create a new viper instance just for the directory config
+	dirConfig := viper.New()
+	dirConfig.SetConfigName(".mdv")
+	dirConfig.SetConfigType("yaml")
+	dirConfig.AddConfigPath(dir)
+
+	// Try to read the directory-specific config
+	if err := dirConfig.ReadInConfig(); err == nil {
+		// Merge it into the main viper instance
+		_ = v.MergeConfigMap(dirConfig.AllSettings())
+	}
+}
+
 // Decode pulls values from Viper into a typed Config.
 func Decode(v *viper.Viper, fileArg string) (Config, error) {
 	cfg := Config{
