@@ -10,8 +10,10 @@
 <body>
   <main id="content">Loading…</main>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', async () => {
+  <script type="module">
+    import { EventsOn } from './wailsjs/runtime/runtime.js';
+
+    async function loadContent() {
       try {
         const html = await window.go.main.App.GetHTML();
         document.getElementById('content').innerHTML = html || "<p>No content.</p>";
@@ -19,6 +21,16 @@
         document.getElementById('content').innerHTML = "<p>Failed to load content.</p>";
         console.error(e);
       }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadContent();
+
+      // Listen for file change events (watch mode)
+      EventsOn('file-changed', async () => {
+        console.log('File changed, reloading content...');
+        await loadContent();
+      });
     });
 
     // Intercept link clicks and open external links in default browser

@@ -45,7 +45,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, reloadFileCmd(m.filePath, m.cfg)
 		case "o":
 			// Open in GUI
-			return m, openInGUICmd(m.filePath)
+			return m, openInGUICmd(m.filePath, m.cfg)
 		}
 
 	case openGUIMsg:
@@ -208,7 +208,7 @@ func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
 
 type openGUIMsg struct{}
 
-func openInGUICmd(path string) tea.Cmd {
+func openInGUICmd(path string, cfg config.Config) tea.Cmd {
 	return func() tea.Msg {
 		// Try to find and launch mdv-gui
 		guiPath, err := exec.LookPath("mdv-gui")
@@ -217,12 +217,25 @@ func openInGUICmd(path string) tea.Cmd {
 			return nil
 		}
 
-		// Launch mdv-gui in the background
-		cmd := exec.Command(guiPath, path)
+		// Launch mdv-gui in the background with config flags
+		args := buildGUIArgs(path, cfg)
+		cmd := exec.Command(guiPath, args...)
 		_ = cmd.Start()
 
 		return openGUIMsg{}
 	}
+}
+
+// buildGUIArgs builds command arguments for launching mdv-gui with config flags
+func buildGUIArgs(file string, cfg config.Config) []string {
+	args := []string{file}
+	if cfg.Watch {
+		args = append(args, "--watch")
+	}
+	if cfg.Theme != "auto" {
+		args = append(args, "--theme", cfg.Theme)
+	}
+	return args
 }
 
 // findMarkdownFiles returns all markdown files in the specified directory (non-recursive)
@@ -370,7 +383,8 @@ var rootCmd = &cobra.Command{
 					// Launch multiple GUI instances
 					fmt.Printf("Launching %d GUI windows...\n", len(selectedFiles))
 					for _, file := range selectedFiles {
-						cmd := exec.Command(guiPath, file)
+						args := buildGUIArgs(file, cfg)
+						cmd := exec.Command(guiPath, args...)
 						err := cmd.Start()
 						if err != nil {
 							fmt.Fprintf(os.Stderr, "Warning: failed to launch GUI for %s: %v\n", file, err)
@@ -380,7 +394,8 @@ var rootCmd = &cobra.Command{
 				}
 
 				// Single file - use existing logic
-				cmd := exec.Command(guiPath, cfg.File)
+				args := buildGUIArgs(cfg.File, cfg)
+				cmd := exec.Command(guiPath, args...)
 				err := cmd.Start()
 				if err != nil {
 					return fmt.Errorf("failed to launch mdv-gui: %w", err)
