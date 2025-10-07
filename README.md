@@ -11,6 +11,7 @@
 
 - 🎯 **Smart File Detection** - Auto-opens single files, shows picker for multiple files
 - 📁 **Directory Scanning** - Point to a directory and mdv finds all markdown files
+- 📂 **Multi-File Support** - Open multiple files at once in GUI mode
 - 🎨 **Automatic Theme Detection** - Matches your system's dark/light mode automatically
 - 🖥️ **Dual Modes** - Use as a TUI (`mdv`) or GUI (`mdv-gui`) application
 - 🔄 **Live Reload** - Watch mode automatically updates when files change
@@ -58,6 +59,9 @@ mdv examples/
 
 # Open in GUI mode
 mdv -g README.md
+
+# Open multiple files in GUI mode (opens separate windows)
+mdv -g README.md CHANGELOG.md LICENSE
 
 # Auto-detect file and open in GUI
 mdv -g
@@ -107,12 +111,23 @@ Launch the native desktop application with the `-g` flag or use `mdv-gui` direct
 mdv -g README.md
 mdv-gui README.md
 
+# Open multiple files (each in a separate window)
+mdv -g README.md CHANGELOG.md docs/guide.md
+
 # Launch GUI and pick from current directory
 mdv -g
 
 # Launch GUI and pick from a specific directory
 mdv -g examples/
 ```
+
+**Multi-Select Picker (GUI Mode Only):**
+
+When scanning a directory with `-g` flag, the picker allows multi-select:
+- Use `↑`/`↓` or `j`/`k` to navigate
+- Press `space` to stage files (shows `[x]`)
+- Press `enter` to open all staged files in separate windows
+- Or just press `enter` without staging to open the current file
 
 The GUI automatically opens external links in your default browser.
 
@@ -127,12 +142,14 @@ mdv ~/projects/my-app/
 # If directory has multiple .md files, shows a picker
 mdv ~/documentation/
 
-# Works with GUI mode too
+# Works with GUI mode too (picker supports multi-select)
 mdv -g ~/notes/
 
 # Exclude specific files when scanning
 mdv --exclude "README.md,draft-*.md" ~/notes/
 ```
+
+**Note:** In TUI mode, the picker is single-select. In GUI mode (`-g`), you can stage multiple files with `space` and open them all.
 
 ## Configuration
 
@@ -182,6 +199,9 @@ export MDV_EXCLUDE="README.md,draft-*.md"
 
 ```bash
 mdv --help
+
+Usage:
+  mdv [file.md|directory...]
 
 Flags:
   -e, --exclude strings   Glob patterns for files to exclude (comma-separated)
