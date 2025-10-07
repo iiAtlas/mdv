@@ -100,13 +100,37 @@ tasks:
   install:gui:
     desc: Install GUI to $GOPATH/bin/mdv-gui
     deps: [build:gui]
+    platforms: [darwin, linux, windows]
     cmds:
-      - cp {{.GUI_DIR}}/build/bin/mdv-gui {{.GOPATH}}/bin/
+      - |
+        {{if eq OS "darwin"}}
+        cp {{.GUI_DIR}}/build/bin/mdv-gui.app/Contents/MacOS/mdv-gui {{.GOPATH}}/bin/
+        {{else if eq OS "windows"}}
+        cp {{.GUI_DIR}}/build/bin/mdv-gui.exe {{.GOPATH}}/bin/
+        {{else}}
+        cp {{.GUI_DIR}}/build/bin/mdv-gui {{.GOPATH}}/bin/
+        {{end}}
       - echo "Installed {{.GOPATH}}/bin/mdv-gui"
 
   install:all:
     desc: Install both TUI and GUI
     deps: [install:tui, install:gui]
+
+  uninstall:tui:
+    desc: Uninstall TUI from $GOPATH/bin/mdv
+    cmds:
+      - rm -f {{.GOPATH}}/bin/{{.APP}}
+      - echo "Uninstalled {{.GOPATH}}/bin/{{.APP}}"
+
+  uninstall:gui:
+    desc: Uninstall GUI from $GOPATH/bin/mdv-gui
+    cmds:
+      - rm -f {{.GOPATH}}/bin/mdv-gui
+      - echo "Uninstalled {{.GOPATH}}/bin/mdv-gui"
+
+  uninstall:all:
+    desc: Uninstall both TUI and GUI
+    deps: [uninstall:tui, uninstall:gui]
 
   # === WATCH TASKS ===
 
