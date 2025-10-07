@@ -44,3 +44,5 @@ Makefile.backup
 # Coverage reports
 coverage.html
 coverage.out
+
+github_token

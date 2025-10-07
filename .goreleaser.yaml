@@ -1,5 +1,8 @@
 version: 2
 
+env_files:
+  github_token: ./github_token
+
 before:
   hooks:
     # Ensure dependencies are up to date
@@ -68,6 +71,41 @@ archives:
       - LICENSE*
       - README*
       - examples/**/*
+  - id: mdv-tui-archive
+    ids:
+      - mdv
+    name_template: >-
+      {{ .ProjectName }}-
+      tui_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE*
+      - README*
+      - examples/**/*
+  - id: mdv-gui-archive
+    ids:
+      - mdv-gui
+    name_template: >-
+      {{ .ProjectName }}-
+      gui_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE*
+      - README*
 
 checksum:
   name_template: 'checksums.txt'
@@ -114,6 +152,28 @@ homebrew_casks:
     binary: mdv
     custom_block: |
       binary "mdv-gui"
+  - name: mdv-tui
+    ids:
+      - mdv-tui-archive
+    homepage: https://github.com/iiatlas/mdv
+    description: Terminal-based markdown viewer (TUI only)
+    license: MIT
+    repository:
+      owner: iiatlas
+      name: homebrew-tap
+    directory: Casks
+    binary: mdv
+  - name: mdv-gui
+    ids:
+      - mdv-gui-archive
+    homepage: https://github.com/iiatlas/mdv
+    description: Native GUI markdown viewer
+    license: MIT
+    repository:
+      owner: iiatlas
+      name: homebrew-tap
+    directory: Casks
+    binary: mdv-gui
 
 # Optional: Docker images
 # dockers:

@@ -24,17 +24,14 @@
 ### Homebrew (macOS/Linux)
 
 ```bash
-# Coming soon
-brew install iiatlas/tap/mdv
-```
+# Install the combined TUI/GUI binary from the Homebrew tap
+brew install --cask iiatlas/tap/mdv
 
-### npm/npx
+# Only need the TUI? Install just the CLI binary
+brew install --cask iiatlas/tap/mdv-tui
 
-```bash
-# Coming soon
-npm install -g @iiatlas/mdv
-# or use directly
-npx @iiatlas/mdv README.md
+# Only need the GUI? Install just the GUI binary
+brew install --cask iiatlas/tap/mdv-gui
 ```
 
 ### Download Binary
