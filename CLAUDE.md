@@ -67,8 +67,8 @@ task clean
 3. **internal/config/** - Configuration system
    - Uses Viper for layered config (flags > directory .mdv.yaml > local .mdv.yaml > ~/.config/mdv/config.yaml > env vars)
    - Directory-specific configs: when viewing a file, mdv checks for .mdv.yaml in that file's directory
-   - Environment variables: MDV_THEME, MDV_WRAP, MDV_WATCH, MDV_GUI, MDV_EXCLUDE
-   - Config struct: Theme, Wrap, GUI, Watch, Exclude, File
+   - Environment variables: MDV_THEME, MDV_THEME_LIGHT, MDV_THEME_DARK, MDV_WRAP, MDV_WATCH, MDV_GUI, MDV_EXCLUDE
+   - Config struct: Theme, ThemeLight, ThemeDark, Wrap, GUI, Watch, Exclude, File, Editor
 
 4. **internal/render/** - Markdown rendering
    - `ToANSI()`: Converts markdown to ANSI for terminal (uses Glamour)
@@ -83,7 +83,7 @@ task clean
 - **Exclude patterns**: Glob patterns via config or `--exclude` flag to skip files when scanning
 - **Live reload**: `--watch` flag uses fsnotify to auto-update TUI on file changes
 - **Dual mode**: TUI (`mdv`) can launch GUI (`mdv-gui`) by pressing 'o' or using `-g` flag
-- **Theme handling**: "auto" theme detects system dark/light preference
+- **Theme handling**: "auto" theme detects system dark/light preference; users can customize which themes are used via `theme-light` and `theme-dark` config options
 
 ### Configuration Precedence
 

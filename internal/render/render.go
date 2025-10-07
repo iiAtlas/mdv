@@ -62,12 +62,27 @@ func detectSystemTheme() string {
 	}
 }
 
-// ResolveTheme resolves "auto" to the system theme, or returns the theme as-is
-func ResolveTheme(theme string) string {
-	if theme == "auto" {
-		return detectSystemTheme()
+// ResolveTheme resolves "auto" to the system theme, or returns the theme as-is.
+// When theme is "auto", it detects the system's dark/light preference and uses
+// themeLight or themeDark if they are set, otherwise falls back to "light" or "dark".
+func ResolveTheme(theme, themeLight, themeDark string) string {
+	if theme != "auto" {
+		return theme
 	}
-	return theme
+
+	// Detect system theme
+	detected := detectSystemTheme()
+
+	// Use custom theme for light/dark mode if configured
+	if detected == "dark" && themeDark != "" {
+		return themeDark
+	}
+	if detected == "light" && themeLight != "" {
+		return themeLight
+	}
+
+	// Fall back to detected theme
+	return detected
 }
 
 func ToHTML(src []byte) ([]byte, error) {
@@ -78,7 +93,7 @@ func ToHTML(src []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ToANSI(src []byte, theme string) (string, error) {
-	resolvedTheme := ResolveTheme(theme)
+func ToANSI(src []byte, theme, themeLight, themeDark string) (string, error) {
+	resolvedTheme := ResolveTheme(theme, themeLight, themeDark)
 	return glamour.Render(string(src), resolvedTheme)
 }

@@ -209,7 +209,7 @@ func reloadFileCmd(path string, cfg config.Config) tea.Cmd {
 		if err != nil {
 			return reloadMsg(fmt.Sprintf("Error reading file: %v", err))
 		}
-		out, err := render.ToANSI(data, cfg.Theme)
+		out, err := render.ToANSI(data, cfg.Theme, cfg.ThemeLight, cfg.ThemeDark)
 		if err != nil {
 			return reloadMsg(fmt.Sprintf("Error rendering: %v", err))
 		}
@@ -488,7 +488,7 @@ var rootCmd = &cobra.Command{
 		// Render Markdown to ANSI with configured theme
 		// Note: glamour doesn't support wrap width directly via API,
 		// but we can use it for future custom rendering
-		out, err := render.ToANSI(data, cfg.Theme)
+		out, err := render.ToANSI(data, cfg.Theme, cfg.ThemeLight, cfg.ThemeDark)
 		if err != nil {
 			return fmt.Errorf("render error: %w", err)
 		}
@@ -508,7 +508,7 @@ var rootCmd = &cobra.Command{
 
 		// If watch mode, start file watcher in background
 		if cfg.Watch {
-			go watchFile(cfg.File, cfg.Theme, p)
+			go watchFile(cfg.File, cfg.Theme, cfg.ThemeLight, cfg.ThemeDark, p)
 		}
 
 		finalModel, err := p.Run()
@@ -531,7 +531,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func watchFile(path, theme string, p *tea.Program) {
+func watchFile(path, theme, themeLight, themeDark string, p *tea.Program) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return
@@ -554,7 +554,7 @@ func watchFile(path, theme string, p *tea.Program) {
 				if err != nil {
 					continue
 				}
-				out, err := render.ToANSI(data, theme)
+				out, err := render.ToANSI(data, theme, themeLight, themeDark)
 				if err != nil {
 					continue
 				}

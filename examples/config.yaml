@@ -3,29 +3,102 @@
 #   macOS:   ~/.config/mdv/config.yaml
 #   Linux:   ~/.config/mdv/config.yaml
 #   Windows: %APPDATA%/mdv/config.yaml
+#
+# Or create a local .mdv.yaml in your project directory for
+# project-specific settings that override the global config.
+
+# ============================================================
+# THEME SETTINGS
+# ============================================================
 
 # Theme for markdown rendering
 # Options: "dark", "light", "auto", "notty", "dracula", "pink", "tokyo-night"
 theme: auto
+
+# Override themes for light/dark mode when theme is set to "auto"
+# This allows you to use custom themes while still benefiting from
+# automatic system theme detection
+# Leave empty to use default "light" and "dark" themes
+# theme-light: notty
+# theme-dark: tokyo-night
+
+# ============================================================
+# DISPLAY SETTINGS
+# ============================================================
 
 # Text wrap width for terminal rendering
 # Set to 0 to disable wrapping
 wrap: 80
 
 # Open in GUI mode by default
-# Note: You should still use the mdv-gui command for GUI mode
+# Note: It's recommended to use the mdv-gui command directly for GUI mode
 gui: false
+
+# ============================================================
+# LIVE RELOAD
+# ============================================================
 
 # Auto-reload on file changes
 # Useful for live preview while editing
 watch: false
+
+# ============================================================
+# EDITOR INTEGRATION
+# ============================================================
 
 # Editor to use when pressing 'e' in TUI or GUI
 # Defaults to $EDITOR environment variable, or "vim" if not set
 # Examples: "vim", "nvim", "nano", "code", "code --wait", "subl -w"
 # editor: code
 
-# Files you want explicitely excluded
+# ============================================================
+# FILE EXCLUSION
+# ============================================================
+
+# Glob patterns for files to exclude when scanning directories
+# Useful for ignoring drafts, temporary files, or specific documents
 # exclude:
-# - file-you-dont-want.md
-# - "*-tmp.md"
+#   - README.md
+#   - "draft-*.md"
+#   - "*-tmp.md"
+#   - "*-wip.md"
+
+# ============================================================
+# EXAMPLE CONFIGURATIONS
+# ============================================================
+
+# Example 1: Development/Writing Setup
+# Automatically reload files while you edit them in your favorite editor
+# ---
+# theme: auto
+# theme-dark: dracula
+# wrap: 100
+# watch: true
+# editor: code --wait
+
+# Example 2: Minimalist Terminal Setup
+# Plain text rendering with no colors, narrower width
+# ---
+# theme: notty
+# wrap: 60
+# gui: false
+# watch: false
+
+# Example 3: Presentation Mode
+# Use specific themed appearance, wider text
+# ---
+# theme-light: light
+# theme-dark: tokyo-night
+# wrap: 120
+# gui: true
+
+# Example 4: Project-specific (place in .mdv.yaml in your project)
+# Exclude documentation files and drafts from directory browsing
+# ---
+# theme: auto
+# theme-dark: pink
+# watch: true
+# exclude:
+#   - README.md
+#   - CONTRIBUTING.md
+#   - "*-draft.md"

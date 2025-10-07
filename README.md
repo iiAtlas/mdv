@@ -176,6 +176,11 @@ Create a `.mdv.yaml` file in your project or home directory:
 # Theme: auto, dark, light, notty, dracula, pink, tokyo-night
 theme: auto
 
+# Override themes for light/dark mode when theme is "auto"
+# Leave empty to use default "light" and "dark" themes
+# theme-light: notty
+# theme-dark: tokyo-night
+
 # Text wrap width for terminal rendering
 wrap: 80
 
@@ -200,6 +205,8 @@ exclude:
 
 ```bash
 export MDV_THEME=dark
+export MDV_THEME_LIGHT=notty        # Theme to use in light mode when MDV_THEME=auto
+export MDV_THEME_DARK=tokyo-night   # Theme to use in dark mode when MDV_THEME=auto
 export MDV_WRAP=100
 export MDV_WATCH=true
 export MDV_GUI=false
@@ -234,6 +241,18 @@ Flags:
 - **dracula** - Dracula color scheme
 - **pink** - Pink color scheme
 - **tokyo-night** - Tokyo Night color scheme
+
+#### Custom Themes for Auto Mode
+
+When using `theme: auto`, you can customize which themes are used for light and dark modes:
+
+```yaml
+theme: auto
+theme-light: notty      # Use 'notty' theme when system is in light mode
+theme-dark: tokyo-night # Use 'tokyo-night' theme when system is in dark mode
+```
+
+This allows you to have personalized themes that automatically switch with your system appearance while still benefiting from auto-detection.
 
 ## Building from Source
 

@@ -4,7 +4,7 @@
 
 # Theme for markdown rendering
 # Options: "dark", "light", "auto", "notty", "dracula", "pink", "tokyo-night"
-theme: dark
+theme: auto
 
 # Text wrap width for terminal rendering
 # Set to 0 to disable wrapping
