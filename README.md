@@ -129,6 +129,9 @@ mdv ~/documentation/
 
 # Works with GUI mode too
 mdv -g ~/notes/
+
+# Exclude specific files when scanning
+mdv --exclude "README.md,draft-*.md" ~/notes/
 ```
 
 ## Configuration
@@ -136,9 +139,10 @@ mdv -g ~/notes/
 mdv can be configured through multiple sources (in order of precedence):
 
 1. Command-line flags
-2. Environment variables
+2. `.mdv.yaml` in target directory (when viewing files in that directory)
 3. `.mdv.yaml` in current directory
 4. `~/.config/mdv/config.yaml` (global config)
+5. Environment variables
 
 ### Configuration File
 
@@ -156,6 +160,12 @@ watch: false
 
 # Open in GUI mode by default
 gui: false
+
+# Exclude files when scanning directories (glob patterns)
+exclude:
+  - README.md
+  - "draft-*.md"
+  - "*-wip.md"
 ```
 
 ### Environment Variables
@@ -165,6 +175,7 @@ export MDV_THEME=dark
 export MDV_WRAP=100
 export MDV_WATCH=true
 export MDV_GUI=false
+export MDV_EXCLUDE="README.md,draft-*.md"
 ```
 
 ### Command-line Flags
@@ -173,11 +184,12 @@ export MDV_GUI=false
 mdv --help
 
 Flags:
-  -g, --gui            Open in GUI mode (use mdv-gui instead)
-  -h, --help           help for mdv
-  -t, --theme string   Theme for rendering (dark, light, auto) (default "auto")
-      --watch          Auto-reload on file change
-  -w, --wrap int       Wrap width for terminal rendering (default 80)
+  -e, --exclude strings   Glob patterns for files to exclude (comma-separated)
+  -g, --gui               Open in GUI mode (use mdv-gui instead)
+  -h, --help              help for mdv
+  -t, --theme string      Theme for rendering (dark, light, auto) (default "auto")
+      --watch             Auto-reload on file change
+  -w, --wrap int          Wrap width for terminal rendering (default 80)
 ```
 
 ### Available Themes
