@@ -43,14 +43,15 @@ builds:
       - arm64
     hooks:
       pre:
-        - sh: cd cmd/mdv-gui && wails build -clean -platform {{.Os}}/{{.Arch}}
+        - cmd: wails build -clean -platform {{ .Os }}/{{ .Arch }}
+          dir: ./cmd/mdv-gui
     ldflags:
       - -s -w
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 archives:
   - id: mdv-archive
-    builds:
+    ids:
       - mdv
       - mdv-gui
     name_template: >-
@@ -61,7 +62,8 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     files:
       - LICENSE*
       - README*
@@ -72,7 +74,7 @@ checksum:
   algorithm: sha256
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
@@ -98,8 +100,7 @@ changelog:
     - title: Others
       order: 999
 
-# Homebrew tap
-brews:
+homebrew_casks:
   - name: mdv
     ids:
       - mdv-archive
@@ -109,12 +110,10 @@ brews:
     repository:
       owner: iiatlas
       name: homebrew-tap
-    folder: Formula
-    install: |
-      bin.install "mdv"
-      bin.install "mdv-gui"
-    test: |
-      system "#{bin}/mdv", "--version"
+    directory: Casks
+    binary: mdv
+    custom_block: |
+      binary "mdv-gui"
 
 # Optional: Docker images
 # dockers:
