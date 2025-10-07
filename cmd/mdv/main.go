@@ -102,9 +102,11 @@ func (m model) footerView() string {
 
 // pickerModel is a simple file picker
 type pickerModel struct {
-	files    []string
-	cursor   int
-	selected string
+	files       []string
+	cursor      int
+	selected    []string
+	staged      map[string]bool
+	multiSelect bool // Enable multi-select mode (for GUI)
 }
 
 func (p pickerModel) Init() tea.Cmd {
@@ -125,8 +127,26 @@ func (p pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if p.cursor < len(p.files)-1 {
 				p.cursor++
 			}
+		case " ":
+			// Toggle staging for current file (only in multi-select mode)
+			if p.multiSelect {
+				currentFile := p.files[p.cursor]
+				p.staged[currentFile] = !p.staged[currentFile]
+			}
 		case "enter":
-			p.selected = p.files[p.cursor]
+			// If files are staged, select all staged files
+			// Otherwise, select current cursor file (existing behavior)
+			if len(p.staged) > 0 {
+				for _, file := range p.files {
+					if p.staged[file] {
+						p.selected = append(p.selected, file)
+					}
+				}
+			}
+			if len(p.selected) == 0 {
+				// No staged files, use cursor position
+				p.selected = []string{p.files[p.cursor]}
+			}
 			return p, tea.Quit
 		}
 	}
@@ -139,11 +159,34 @@ func (p pickerModel) View() string {
 		cursor := " "
 		if p.cursor == i {
 			cursor = ">"
-			file = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Render(file)
 		}
-		s += fmt.Sprintf(" %s %s\n", cursor, file)
+
+		// Highlight cursor line
+		displayFile := file
+		if p.cursor == i {
+			displayFile = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Render(file)
+		}
+
+		// Show staging indicator only in multi-select mode
+		if p.multiSelect {
+			stageIndicator := "[ ]"
+			if p.staged[file] {
+				stageIndicator = "[x]"
+			}
+			s += fmt.Sprintf(" %s %s %s\n", cursor, stageIndicator, displayFile)
+		} else {
+			s += fmt.Sprintf(" %s %s\n", cursor, displayFile)
+		}
 	}
-	s += "\n" + lipgloss.NewStyle().Faint(true).Render("↑/↓: navigate • enter: select • q: quit")
+
+	// Show different help text based on mode
+	var helpText string
+	if p.multiSelect {
+		helpText = "↑/↓: navigate • space: stage • enter: open • q: quit"
+	} else {
+		helpText = "↑/↓: navigate • enter: select • q: quit"
+	}
+	s += "\n" + lipgloss.NewStyle().Faint(true).Render(helpText)
 	return s
 }
 
@@ -227,10 +270,9 @@ func isDirectory(path string) bool {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "mdv [file.md|directory]",
+	Use:   "mdv [file.md|directory...]",
 	Short: "Markdown viewer with TUI",
 	Long:  `A terminal-based markdown viewer with support for themes, auto-reload, and GUI mode.`,
-	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize Viper
 		v := config.NewViper()
@@ -244,20 +286,22 @@ var rootCmd = &cobra.Command{
 		var fileArg string
 		var scanDir string
 		var needsScan bool
+		var selectedFiles []string // Track multiple files selected from picker
 
 		if len(args) == 0 {
 			// No args, scan current directory
 			scanDir = "."
 			needsScan = true
-		} else if isDirectory(args[0]) {
-			// Arg is a directory, scan it
+		} else if len(args) == 1 && isDirectory(args[0]) {
+			// Single arg that's a directory, scan it
 			scanDir = args[0]
 			needsScan = true
 		} else {
-			// Arg is a file path
-			fileArg = args[0]
+			// One or more file paths provided
+			selectedFiles = args
+			fileArg = selectedFiles[0]
 			needsScan = false
-			// Also check for config in the file's directory
+			// Also check for config in the first file's directory
 			config.MergeDirectoryConfig(v, filepath.Dir(fileArg))
 		}
 
@@ -282,17 +326,31 @@ var rootCmd = &cobra.Command{
 				fileArg = filepath.Join(scanDir, files[0])
 			} else {
 				// Multiple files found, show picker
-				picker := pickerModel{files: files}
+				// Check if GUI mode is enabled to determine if multi-select should be available
+				guiMode := v.GetBool("gui")
+				picker := pickerModel{
+					files:       files,
+					staged:      make(map[string]bool),
+					multiSelect: guiMode,
+				}
 				p := tea.NewProgram(picker)
 				finalModel, err := p.Run()
 				if err != nil {
 					return fmt.Errorf("error running picker: %w", err)
 				}
 				pickerResult := finalModel.(pickerModel)
-				if pickerResult.selected == "" {
+				if len(pickerResult.selected) == 0 {
 					return fmt.Errorf("no file selected")
 				}
-				fileArg = filepath.Join(scanDir, pickerResult.selected)
+
+				// Store selected files with full paths
+				selectedFiles = make([]string, len(pickerResult.selected))
+				for i, file := range pickerResult.selected {
+					selectedFiles[i] = filepath.Join(scanDir, file)
+				}
+
+				// Set fileArg to first file (used for config decode and TUI mode)
+				fileArg = selectedFiles[0]
 			}
 		}
 
@@ -307,7 +365,21 @@ var rootCmd = &cobra.Command{
 			// Try to launch mdv-gui if available
 			guiPath, err := exec.LookPath("mdv-gui")
 			if err == nil {
-				// mdv-gui found, launch it in background
+				// Check if multiple files were selected from picker
+				if len(selectedFiles) > 1 {
+					// Launch multiple GUI instances
+					fmt.Printf("Launching %d GUI windows...\n", len(selectedFiles))
+					for _, file := range selectedFiles {
+						cmd := exec.Command(guiPath, file)
+						err := cmd.Start()
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: failed to launch GUI for %s: %v\n", file, err)
+						}
+					}
+					return nil
+				}
+
+				// Single file - use existing logic
 				cmd := exec.Command(guiPath, cfg.File)
 				err := cmd.Start()
 				if err != nil {
@@ -320,6 +392,13 @@ var rootCmd = &cobra.Command{
 			fmt.Println("GUI mode requested, but 'mdv-gui' not found.")
 			fmt.Printf("Please install mdv-gui or run: mdv-gui %s\n", cfg.File)
 			return fmt.Errorf("mdv-gui not found in PATH")
+		}
+
+		// If multiple files selected but in TUI mode, inform user
+		if len(selectedFiles) > 1 {
+			fmt.Printf("Note: %d files selected, but TUI mode can only display one file.\n", len(selectedFiles))
+			fmt.Printf("Opening first file: %s\n", cfg.File)
+			fmt.Println("Tip: Use -g flag to open all selected files in GUI mode.")
 		}
 
 		// Read file
