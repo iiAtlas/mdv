@@ -1,11 +1,19 @@
-:root { color-scheme: light dark; }
-html,body{margin:0;padding:0}
-body{
+/* Basic reset - body background is set dynamically by theme CSS */
+html, body {
+  height: 100%;
   -webkit-font-smoothing: antialiased;
-  font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  padding: 16px;
 }
-main{max-width:72ch;margin:auto}
-pre,code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-img,video{max-width:100%;height:auto}
-a{text-decoration:underline}
+
+body {
+  overflow-y: scroll;
+}
+
+/* Content container - padding provides nice margins, background inherits from body */
+#content {
+  padding: 32px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* The markdown-body class is styled by the injected github-markdown-css theme */
+/* It includes its own padding and background color that matches body */

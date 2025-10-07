@@ -11,15 +11,19 @@ import (
 
 // Config is what the rest of your app reads.
 type Config struct {
-	Theme      string   // "dark", "light", "auto", or custom
-	ThemeLight string   // theme to use when system is in light mode (only applies when Theme is "auto")
-	ThemeDark  string   // theme to use when system is in dark mode (only applies when Theme is "auto")
-	Wrap       int      // wrap width for terminal rendering
-	GUI        bool     // open GUI (Wails) instead of TUI
-	Watch      bool     // auto-reload on file change
-	Exclude    []string // glob patterns for files to exclude
-	File       string   // markdown file path (positional arg)
-	Editor     string   // editor command to open files (defaults to $EDITOR or "vim")
+	Theme         string   // "dark", "light", "auto", or custom (for TUI/Glamour)
+	ThemeLight    string   // theme to use when system is in light mode (only applies when Theme is "auto")
+	ThemeDark     string   // theme to use when system is in dark mode (only applies when Theme is "auto")
+	GUITheme      string   // "dark", "light", "auto", or custom CSS file (for GUI/Goldmark)
+	GUIThemeLight string   // GUI theme to use when system is in light mode (only applies when GUITheme is "auto")
+	GUIThemeDark  string   // GUI theme to use when system is in dark mode (only applies when GUITheme is "auto")
+	GUIWidth      string   // "narrow", "medium", "wide", "full" - content width for GUI
+	Wrap          int      // wrap width for terminal rendering
+	GUI           bool     // open GUI (Wails) instead of TUI
+	Watch         bool     // auto-reload on file change
+	Exclude       []string // glob patterns for files to exclude
+	File          string   // markdown file path (positional arg)
+	Editor        string   // editor command to open files (defaults to $EDITOR or "vim")
 }
 
 // NewViper sets up Viper with sensible defaults and search paths.
@@ -30,6 +34,10 @@ func NewViper() *viper.Viper {
 	v.SetDefault("theme", "auto")
 	v.SetDefault("theme-light", "")
 	v.SetDefault("theme-dark", "")
+	v.SetDefault("gui-theme", "auto")
+	v.SetDefault("gui-theme-light", "")
+	v.SetDefault("gui-theme-dark", "")
+	v.SetDefault("gui-width", "medium")
 	v.SetDefault("wrap", 80)
 	v.SetDefault("gui", false)
 	v.SetDefault("watch", false)
@@ -67,6 +75,12 @@ func NewViper() *viper.Viper {
 func BindFlags(v *viper.Viper, fs *pflag.FlagSet) error {
 	bind := func(key, name string) error { return v.BindPFlag(key, fs.Lookup(name)) }
 	if err := bind("theme", "theme"); err != nil {
+		return err
+	}
+	if err := bind("gui-theme", "gui-theme"); err != nil {
+		return err
+	}
+	if err := bind("gui-width", "gui-width"); err != nil {
 		return err
 	}
 	if err := bind("wrap", "wrap"); err != nil {
@@ -138,15 +152,19 @@ func resolveThemePath(themePath, configDir string) string {
 // configDir is the directory containing the config file being used (typically the directory of the file being viewed).
 func Decode(v *viper.Viper, fileArg string, configDir string) (Config, error) {
 	cfg := Config{
-		Theme:      resolveThemePath(v.GetString("theme"), configDir),
-		ThemeLight: resolveThemePath(v.GetString("theme-light"), configDir),
-		ThemeDark:  resolveThemePath(v.GetString("theme-dark"), configDir),
-		Wrap:       v.GetInt("wrap"),
-		GUI:        v.GetBool("gui"),
-		Watch:      v.GetBool("watch"),
-		Exclude:    v.GetStringSlice("exclude"),
-		File:       fileArg,
-		Editor:     v.GetString("editor"),
+		Theme:         resolveThemePath(v.GetString("theme"), configDir),
+		ThemeLight:    resolveThemePath(v.GetString("theme-light"), configDir),
+		ThemeDark:     resolveThemePath(v.GetString("theme-dark"), configDir),
+		GUITheme:      resolveThemePath(v.GetString("gui-theme"), configDir),
+		GUIThemeLight: resolveThemePath(v.GetString("gui-theme-light"), configDir),
+		GUIThemeDark:  resolveThemePath(v.GetString("gui-theme-dark"), configDir),
+		GUIWidth:      v.GetString("gui-width"),
+		Wrap:          v.GetInt("wrap"),
+		GUI:           v.GetBool("gui"),
+		Watch:         v.GetBool("watch"),
+		Exclude:       v.GetStringSlice("exclude"),
+		File:          fileArg,
+		Editor:        v.GetString("editor"),
 	}
 	if cfg.Wrap < 0 {
 		return cfg, fmt.Errorf("wrap must be >= 0")

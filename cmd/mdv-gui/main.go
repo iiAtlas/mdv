@@ -66,7 +66,7 @@ var rootCmd = &cobra.Command{
 			AssetServer: &assetserver.Options{
 				Assets: assets,
 			},
-			BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 255},
+			BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0}, // Transparent - let CSS control background
 			OnStartup:        app.startup,
 			OnShutdown:       app.shutdown,
 			Bind: []interface{}{
@@ -82,7 +82,9 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringP("theme", "t", "auto", "Theme for rendering (dark, light, auto)")
+	rootCmd.Flags().StringP("theme", "t", "auto", "Theme for TUI rendering (dark, light, auto)")
+	rootCmd.Flags().String("gui-theme", "auto", "Theme for GUI rendering (light, dark, auto, or path to CSS file)")
+	rootCmd.Flags().String("gui-width", "medium", "Content width for GUI (narrow, medium, wide, full, or pixel value)")
 	rootCmd.Flags().IntP("wrap", "w", 80, "Wrap width (not used in GUI)")
 	rootCmd.Flags().Bool("watch", false, "Auto-reload on file change")
 	rootCmd.Flags().StringSliceP("exclude", "e", []string{}, "Glob patterns for files to exclude (comma-separated)")

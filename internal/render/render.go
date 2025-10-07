@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -86,12 +87,48 @@ func ResolveTheme(theme, themeLight, themeDark string) string {
 	return detected
 }
 
-func ToHTML(src []byte) ([]byte, error) {
+func ToHTML(src []byte, theme, themeLight, themeDark, width string) ([]byte, error) {
+	// Convert markdown to HTML
 	var buf bytes.Buffer
 	if err := md.Convert(src, &buf); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+
+	// Resolve theme (handles "auto" detection)
+	resolvedTheme := ResolveTheme(theme, themeLight, themeDark)
+
+	// Load CSS for the resolved theme
+	css, err := loadThemeCSS(resolvedTheme)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract background color from the CSS and apply to body/html
+	bgColor := extractBackgroundColor(css)
+	var bodyCSS string
+	if bgColor != "" {
+		bodyCSS = fmt.Sprintf("html, body { background-color: %s; margin: 0; padding: 0; }\n", bgColor)
+	}
+
+	// Apply width constraint if specified
+	maxWidth := getMaxWidth(width)
+	var widthCSS string
+	if maxWidth != "" {
+		widthCSS = fmt.Sprintf(".markdown-body { max-width: %s; margin-left: auto; margin-right: auto; }\n", maxWidth)
+	}
+
+	// Wrap the HTML with the CSS theme and markdown-body container
+	var output bytes.Buffer
+	output.WriteString("<style>\n")
+	output.WriteString(bodyCSS)
+	output.WriteString(widthCSS)
+	output.WriteString(css)
+	output.WriteString("\n</style>\n")
+	output.WriteString(`<div class="markdown-body">` + "\n")
+	output.Write(buf.Bytes())
+	output.WriteString("\n</div>")
+
+	return output.Bytes(), nil
 }
 
 func ToANSI(src []byte, theme, themeLight, themeDark string, wrap int) (string, error) {
