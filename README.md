@@ -69,8 +69,14 @@ mdv -g
 # Watch mode - auto-reload on file changes
 mdv --watch document.md
 
-# Use light theme
+# Use light theme in TUI
 mdv -t light README.md
+
+# Use dark theme in GUI with narrow width for reading
+mdv -g --gui-theme dark --gui-width narrow README.md
+
+# GUI with wide layout for technical docs
+mdv-gui --gui-theme light --gui-width wide TECHNICAL.md
 ```
 
 ## Usage
@@ -120,6 +126,13 @@ mdv -g
 
 # Launch GUI and pick from a specific directory
 mdv -g examples/
+
+# Customize GUI appearance
+mdv-gui --gui-theme dark --gui-width narrow README.md
+mdv-gui --gui-theme light --gui-width wide docs/API.md
+
+# Use custom CSS theme
+mdv-gui --gui-theme ~/my-theme.css README.md
 ```
 
 **Multi-Select Picker (GUI Mode Only):**
@@ -173,13 +186,25 @@ mdv can be configured through multiple sources (in order of precedence):
 Create a `.mdv.yaml` file in your project or home directory:
 
 ```yaml
-# Theme: auto, dark, light, notty, dracula, pink, tokyo-night, or path to custom JSON theme
+# TUI Theme: auto, dark, light, notty, dracula, pink, tokyo-night, or path to custom JSON theme
 theme: auto
 
-# Override themes for light/dark mode when theme is "auto"
+# Override TUI themes for light/dark mode when theme is "auto"
 # Leave empty to use default "light" and "dark" themes
 # theme-light: notty
 # theme-dark: tokyo-night
+
+# GUI Theme: auto, light, dark, or path to custom CSS file
+# gui-theme: auto
+
+# Override GUI themes for light/dark mode when gui-theme is "auto"
+# gui-theme-light: light
+# gui-theme-dark: dark
+
+# Content width for GUI rendering
+# Options: narrow (680px), medium (900px, default), wide (1200px), full (no constraint)
+# Or specify a custom pixel value: "800"
+# gui-width: medium
 
 # Text wrap width for terminal rendering
 wrap: 80
@@ -204,10 +229,19 @@ exclude:
 ### Environment Variables
 
 ```bash
+# TUI settings
 export MDV_THEME=dark
 export MDV_THEME_LIGHT=notty        # Theme to use in light mode when MDV_THEME=auto
 export MDV_THEME_DARK=tokyo-night   # Theme to use in dark mode when MDV_THEME=auto
 export MDV_WRAP=100
+
+# GUI settings
+export MDV_GUI_THEME=dark           # GUI theme (auto, light, dark, or CSS file path)
+export MDV_GUI_THEME_LIGHT=light    # GUI theme for light mode when MDV_GUI_THEME=auto
+export MDV_GUI_THEME_DARK=dark      # GUI theme for dark mode when MDV_GUI_THEME=auto
+export MDV_GUI_WIDTH=medium         # GUI content width (narrow, medium, wide, full, or pixel value)
+
+# General settings
 export MDV_WATCH=true
 export MDV_GUI=false
 export MDV_EDITOR=code
@@ -223,16 +257,20 @@ Usage:
   mdv [file.md|directory...]
 
 Flags:
-      --editor string     Editor command to open files (defaults to $EDITOR or vim)
-  -e, --exclude strings   Glob patterns for files to exclude (comma-separated)
-  -g, --gui               Open in GUI mode (use mdv-gui instead)
-  -h, --help              help for mdv
-  -t, --theme string      Theme for rendering (dark, light, auto) (default "auto")
-      --watch             Auto-reload on file change
-  -w, --wrap int          Wrap width for terminal rendering (default 80)
+      --editor string       Editor command to open files (defaults to $EDITOR or vim)
+  -e, --exclude strings     Glob patterns for files to exclude (comma-separated)
+  -g, --gui                 Open in GUI mode (use mdv-gui instead)
+      --gui-theme string    Theme for GUI rendering (light, dark, auto, or path to CSS file) (default "auto")
+      --gui-width string    Content width for GUI (narrow, medium, wide, full, or pixel value) (default "medium")
+  -h, --help                help for mdv
+  -t, --theme string        Theme for TUI rendering (dark, light, auto) (default "auto")
+      --watch               Auto-reload on file change
+  -w, --wrap int            Wrap width for terminal rendering (default 80)
 ```
 
 ### Available Themes
+
+#### TUI Themes (Terminal)
 
 - **auto** - Automatically matches your system theme (default)
 - **dark** - Optimized for dark terminals
@@ -242,7 +280,7 @@ Flags:
 - **pink** - Pink color scheme
 - **tokyo-night** - Tokyo Night color scheme
 
-#### Custom Themes for Auto Mode
+**Custom Themes for Auto Mode:**
 
 When using `theme: auto`, you can customize which themes are used for light and dark modes:
 
@@ -254,7 +292,7 @@ theme-dark: tokyo-night # Use 'tokyo-night' theme when system is in dark mode
 
 This allows you to have personalized themes that automatically switch with your system appearance while still benefiting from auto-detection.
 
-#### Custom Theme JSON Files
+**Custom Theme JSON Files:**
 
 You can create your own custom themes using Glamour's JSON theme format. Theme values can be either built-in theme names or paths to custom JSON theme files:
 
@@ -303,6 +341,89 @@ Example custom theme structure:
 ```
 
 You can start by copying an existing theme from the [Glamour styles directory](https://github.com/charmbracelet/glamour/tree/master/styles) and modifying it to your preferences.
+
+#### GUI Themes (Desktop Application)
+
+The GUI mode uses CSS-based themes powered by [github-markdown-css](https://github.com/sindresorhus/github-markdown-css):
+
+- **auto** - Automatically matches your system theme (default)
+- **light** - GitHub-style light theme
+- **dark** - GitHub-style dark theme
+
+**Custom Themes for Auto Mode:**
+
+Similar to TUI themes, you can customize which themes are used in GUI mode:
+
+```yaml
+gui-theme: auto
+gui-theme-light: light  # Use light theme when system is in light mode
+gui-theme-dark: dark    # Use dark theme when system is in dark mode
+```
+
+**Custom CSS Theme Files:**
+
+You can use custom CSS files for complete control over GUI appearance:
+
+```yaml
+# Use a built-in theme
+gui-theme: dark
+
+# Use an absolute path to a custom CSS file
+gui-theme: /Users/me/.config/mdv/themes/custom.css
+
+# Use a relative path (resolved relative to the config file's directory)
+gui-theme: ./themes/mytheme.css
+
+# Use home directory expansion
+gui-theme: ~/.config/mdv/themes/ocean.css
+
+# Works with auto mode too
+gui-theme: auto
+gui-theme-light: ~/themes/light-custom.css
+gui-theme-dark: ~/themes/dark-custom.css
+```
+
+**Creating Custom CSS Themes:**
+
+Custom CSS themes should style the `.markdown-body` class. You can start with github-markdown-css and modify it, or create your own from scratch. The CSS should include:
+
+- `.markdown-body` base styles (background-color, color, font-family, etc.)
+- Heading styles (h1-h6)
+- Paragraph, list, and text formatting
+- Code block and inline code styles
+- Table styles
+- Link styles
+
+Example command-line usage:
+
+```bash
+# Use light theme in GUI
+mdv-gui --gui-theme light README.md
+
+# Use custom CSS theme
+mdv-gui --gui-theme ~/my-theme.css README.md
+```
+
+#### GUI Width Options
+
+Control the content width in GUI mode for optimal reading:
+
+- **narrow** (680px) - Optimal for reading long-form content (~65 characters per line)
+- **medium** (900px, default) - Balanced layout for mixed content
+- **wide** (1200px) - Accommodates wide tables and code blocks
+- **full** - No width constraint, uses entire window
+- **Custom pixel value** - Specify exact width (e.g., `800`)
+
+```yaml
+# In config file
+gui-width: narrow
+
+# Or via command-line
+mdv-gui --gui-width narrow README.md
+mdv-gui --gui-width 800 README.md
+```
+
+The width setting centers the content and maintains proper background color throughout the window.
 
 ## Building from Source
 
