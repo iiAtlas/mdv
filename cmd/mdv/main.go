@@ -304,15 +304,17 @@ var rootCmd = &cobra.Command{
 
 		// Check if GUI mode requested
 		if cfg.GUI {
-			// Try to exec mdv-gui if available
+			// Try to launch mdv-gui if available
 			guiPath, err := exec.LookPath("mdv-gui")
 			if err == nil {
-				// mdv-gui found, exec it
+				// mdv-gui found, launch it in background
 				cmd := exec.Command(guiPath, cfg.File)
-				cmd.Stdin = os.Stdin
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				return cmd.Run()
+				err := cmd.Start()
+				if err != nil {
+					return fmt.Errorf("failed to launch mdv-gui: %w", err)
+				}
+				// Return immediately, GUI runs detached
+				return nil
 			}
 			// mdv-gui not found, print helpful message
 			fmt.Println("GUI mode requested, but 'mdv-gui' not found.")

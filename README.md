@@ -229,39 +229,94 @@ task build:all
 
 ### Development with Task
 
-Task provides convenient commands for development:
+Task provides convenient commands for development. Use `task --list` to see all available tasks.
+
+#### Build Commands
 
 ```bash
-# Build both TUI and GUI
+# Build both TUI and GUI (default)
+task
 task build:all
 
 # Build TUI only
 task build:tui
 
-# Build GUI only
+# Build GUI only (requires Wails CLI)
 task build:gui
 
-# Run TUI in development
+# Install/update dependencies
+task deps
+```
+
+#### Run Commands
+
+```bash
+# Run TUI in development (use -- to pass args)
 task run:tui -- examples/demo.md
 
-# Run GUI in development
+# Run GUI in development with hot reload (use -- to pass args)
 task run:gui -- examples/demo.md
 
-# Install to $GOPATH/bin
+# Demo mode - test with built binaries (simulates installed state)
+task demo -- mdv examples/
+task demo -- mdv -g examples/demo.md
+
+# Run TUI with built-in watch mode
+task watch -- examples/demo.md
+```
+
+#### Install Commands
+
+```bash
+# Install both TUI and GUI to $GOPATH/bin
 task install:all
 
+# Install TUI only
+task install:tui
+
+# Install GUI only
+task install:gui
+
+# Uninstall both
+task uninstall:all
+
+# Uninstall TUI only
+task uninstall:tui
+
+# Uninstall GUI only
+task uninstall:gui
+```
+
+#### Testing & Quality Commands
+
+```bash
 # Run tests
 task test
+
+# Run tests with coverage report (generates coverage.html)
+task test:cover
 
 # Format code
 task fmt
 
+# Run linter (requires golangci-lint)
+task lint
+```
+
+#### Cleanup & Release Commands
+
+```bash
 # Clean build artifacts
 task clean
 
-# Demo mode - test with built binaries (simulates installation)
-task demo -- mdv examples/
-task demo -- mdv -g examples/demo.md
+# Create release via GoReleaser (requires goreleaser)
+task release
+
+# Build snapshot release without publishing
+task release:snapshot
+
+# Show all available tasks
+task help
 ```
 
 ### Manual Build Commands
