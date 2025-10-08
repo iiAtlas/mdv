@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/glamour"
@@ -18,10 +19,10 @@ import (
 
 var md = goldmark.New(
 	goldmark.WithExtensions(
-		extension.GFM,            // tables, strikethrough, task lists
-		extension.Table,          // explicit table extension (redundant, ok)
-		extension.Linkify,        // autolink URLs
-		extension.Strikethrough,  // ~~del~~
+		extension.GFM,           // tables, strikethrough, task lists
+		extension.Table,         // explicit table extension (redundant, ok)
+		extension.Linkify,       // autolink URLs
+		extension.Strikethrough, // ~~del~~
 	),
 	goldmark.WithParserOptions(
 		parser.WithAutoHeadingID(),
@@ -49,11 +50,12 @@ func detectSystemTheme() string {
 			parts := strings.Split(colorfgbg, ";")
 			if len(parts) == 2 {
 				// If background is dark (0-8), use dark theme
-				bg := parts[1]
-				if bg >= "0" && bg <= "8" {
-					return "dark"
+				if bg, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
+					if bg >= 0 && bg <= 8 {
+						return "dark"
+					}
+					return "light"
 				}
-				return "light"
 			}
 		}
 		// Default to dark for Linux
