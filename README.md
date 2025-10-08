@@ -84,6 +84,8 @@ mdv --watch document.md
 
 ### GUI Mode
 
+![MDV GUI Light](assets/mdv-gui-light.png)
+
 **Multi-Select Picker (GUI Mode Only):**
 
 When scanning a directory with `-g` flag, the picker allows multi-select:
