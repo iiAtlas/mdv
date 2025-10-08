@@ -16,11 +16,19 @@ import (
 //go:embed all:frontend
 var assets embed.FS
 
+// Version information (set via ldflags during build)
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 var rootCmd = &cobra.Command{
-	Use:   "mdv-gui [file.md]",
-	Short: "Markdown viewer GUI",
-	Long:  `Native desktop markdown viewer with live reload support.`,
-	Args:  cobra.MaximumNArgs(1),
+	Use:     "mdv-gui [file.md]",
+	Short:   "Markdown viewer GUI",
+	Long:    `Native desktop markdown viewer with live reload support.`,
+	Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize Viper
 		v := config.NewViper()

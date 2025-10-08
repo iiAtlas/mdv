@@ -16,6 +16,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version information (set via ldflags during build)
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type model struct {
 	viewport       viewport.Model
 	content        string
@@ -346,9 +353,10 @@ func isDirectory(path string) bool {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "mdv [file.md|directory...]",
-	Short: "Markdown viewer with TUI",
-	Long:  `A terminal-based markdown viewer with support for themes, auto-reload, and GUI mode.`,
+	Use:     "mdv [file.md|directory...]",
+	Short:   "Markdown viewer with TUI",
+	Long:    `A terminal-based markdown viewer with support for themes, auto-reload, and GUI mode.`,
+	Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize Viper
 		v := config.NewViper()
