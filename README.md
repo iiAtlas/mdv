@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
 
+![MDV Banner](assets/GitHub-banner.png)
+
 **mdv** is a powerful, flexible markdown viewer that works both in the terminal (TUI) and as a native desktop application (GUI). It's built on top of [Glamour](https://github.com/charmbracelet/glamour) and [Goldmark](https://github.com/yuin/goldmark). With smart file detection, automatic theme matching, and live reload capabilities, `mdv` makes reading and previewing markdown effortless _and_ glamorous!
 
 ## Features
