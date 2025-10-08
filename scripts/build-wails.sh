@@ -19,9 +19,11 @@ COMMIT=${GORELEASER_COMMIT:-$(cd "$ROOT_DIR" && git rev-parse HEAD)}
 DATE=${GORELEASER_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}
 LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
 
-export GOCACHE="${ROOT_DIR}/.cache/go-build"
-export GOMODCACHE="${ROOT_DIR}/.cache/go-mod"
-mkdir -p "$GOCACHE" "$GOMODCACHE"
+# Use local cache if possible (for local builds), fall back to default (for CI)
+if mkdir -p "${ROOT_DIR}/.cache/go-build" "${ROOT_DIR}/.cache/go-mod" 2>/dev/null; then
+  export GOCACHE="${ROOT_DIR}/.cache/go-build"
+  export GOMODCACHE="${ROOT_DIR}/.cache/go-mod"
+fi
 
 pushd "$ROOT_DIR/cmd/mdv-gui" >/dev/null
 

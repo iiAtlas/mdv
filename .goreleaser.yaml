@@ -1,16 +1,11 @@
 version: 2
 
-env:
-  - GOCACHE={{ .Env.PWD }}/.cache/go-build
-  - GOMODCACHE={{ .Env.PWD }}/.cache/go-mod
-
 env_files:
   github_token: ./github_token
 
 before:
   hooks:
     # Ensure dependencies are up to date
-    - mkdir -p .cache/go-build .cache/go-mod
     - go mod tidy
     - ./scripts/build-wails.sh
 
