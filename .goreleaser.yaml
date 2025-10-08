@@ -1,12 +1,18 @@
 version: 2
 
+env:
+  - GOCACHE={{ .Env.PWD }}/.cache/go-build
+  - GOMODCACHE={{ .Env.PWD }}/.cache/go-mod
+
 env_files:
   github_token: ./github_token
 
 before:
   hooks:
     # Ensure dependencies are up to date
+    - mkdir -p .cache/go-build .cache/go-mod
     - go mod tidy
+    - ./scripts/build-wails.sh
 
 builds:
   # TUI binary (mdv)
@@ -29,34 +35,10 @@ builds:
       - -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
-  # GUI binary (mdv-gui)
-  # Note: Wails builds are handled separately via `wails build`
-  # The binary is then manually added to the release
-  - id: mdv-gui
-    binary: mdv-gui
-    main: ./cmd/mdv-gui
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-      - linux
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    hooks:
-      pre:
-        - cmd: wails build -clean -platform {{ .Os }}/{{ .Arch }}
-          dir: ./cmd/mdv-gui
-    ldflags:
-      - -s -w
-    mod_timestamp: '{{ .CommitTimestamp }}'
-
 archives:
-  - id: mdv-archive
+  - id: mdv-mac-archive
     ids:
       - mdv
-      - mdv-gui
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -68,9 +50,11 @@ archives:
         formats:
           - zip
     files:
-      - LICENSE*
-      - README*
-      - examples/**/*
+      - src: LICENSE*
+      - src: README*
+      - src: examples/**/*
+      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
+        dst: mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
   - id: mdv-tui-archive
     ids:
       - mdv
@@ -86,12 +70,14 @@ archives:
         formats:
           - zip
     files:
-      - LICENSE*
-      - README*
-      - examples/**/*
+      - src: LICENSE*
+      - src: README*
+      - src: examples/**/*
   - id: mdv-gui-archive
-    ids:
-      - mdv-gui
+    builds: []
+    files:
+      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
+        dst: mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
     name_template: >-
       {{ .ProjectName }}-
       gui_
@@ -103,9 +89,6 @@ archives:
       - goos: windows
         formats:
           - zip
-    files:
-      - LICENSE*
-      - README*
 
 checksum:
   name_template: 'checksums.txt'
@@ -141,7 +124,7 @@ changelog:
 homebrew_casks:
   - name: mdv
     ids:
-      - mdv-archive
+      - mdv-mac-archive
     homepage: https://github.com/iiatlas/mdv
     description: Terminal-based markdown viewer with TUI and GUI modes
     license: MIT

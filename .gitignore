@@ -29,6 +29,8 @@ go.work
 # Temporary files
 *.tmp
 
+.cache/
+
 # Wails (GUI build artifacts)
 cmd/mdv-gui/build/
 cmd/mdv-gui/frontend/wailsjs/
@@ -46,3 +48,6 @@ coverage.html
 coverage.out
 
 github_token
+
+# Build artifacts
+dist/
