@@ -19,5 +19,16 @@
   },
   "nsisType": "multiple",
   "obfuscated": false,
-  "wailsjsdir": "./frontend"
+  "wailsjsdir": "./frontend",
+  "platforms": {
+    "darwin": {
+      "icon": "./frontend/assets/mdv-app-icon.png"
+    },
+    "linux": {
+      "icon": "./frontend/assets/mdv-app-icon.png"
+    },
+    "windows": {
+      "icon": "./frontend/assets/mdv-app-icon.png"
+    }
+  }
 }
