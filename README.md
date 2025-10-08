@@ -40,6 +40,8 @@ brew install --cask iiatlas/tap/mdv-tui
 brew install --cask iiatlas/tap/mdv-gui
 ```
 
+![MDV Demo Light](assets/mdv-demo-light.gif)
+
 ### Download Binary
 
 Releases are powered by [GoReleaser](https://goreleaser.com/). You can download the latest release for your platform from the [releases page](https://github.com/iiAtlas/mdv/releases).
