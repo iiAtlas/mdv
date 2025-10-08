@@ -19,7 +19,7 @@
 - 🔄 **Live Reload** - Watch mode automatically updates when files change
 - ✨ **Beautiful Rendering** - Powered by [Glamour](https://github.com/charmbracelet/glamour) & [Goldmark](https://github.com/yuin/goldmark) for styling
 - 📋 **GitHub Flavored Markdown** - Full support for tables, task lists, strikethrough, and more
-- ⚙️ **Flexible Configuration** - Configure via YAML files, environment variables, or command-line flags.
+- ⚙️ **Flexible Configuration** - Configure via YAML files, environment variables, or command-line flags
 
 ## Installation
 
@@ -57,29 +57,14 @@ mdv
 # Open a specific file
 mdv README.md
 
-# Scan a directory and pick a file
+# Open file(s) in a directory
 mdv examples/
 
 # Open in GUI mode
 mdv -g README.md
 
-# Open multiple files in GUI mode (opens separate windows)
-mdv -g README.md CHANGELOG.md LICENSE
-
-# Auto-detect file and open in GUI
-mdv -g
-
-# Watch mode - auto-reload on file changes
+# Open in watch mode - auto-reload on file changes
 mdv --watch document.md
-
-# Use light theme in TUI
-mdv -t light README.md
-
-# Use dark theme in GUI with narrow width for reading
-mdv -g --gui-theme dark --gui-width narrow README.md
-
-# GUI with wide layout for technical docs
-mdv-gui --gui-theme light --gui-width wide TECHNICAL.md
 ```
 
 **Keyboard Shortcuts:**
@@ -140,7 +125,7 @@ mdv can be configured through multiple sources (in order of precedence):
 
 ### Configuration File
 
-Create a `.mdv.yaml` file in your project or home directory:
+Create a `.mdv.yaml` file in your project or home directory ([example](examples/config.yaml)):
 
 ```yaml
 # TUI Theme: auto, dark, light, notty, dracula, pink, tokyo-night, or path to custom JSON theme
