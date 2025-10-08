@@ -23,14 +23,13 @@
       }
     }
 
+    EventsOn('file-changed', async () => {
+      console.log('File changed, reloading content...');
+      await loadContent();
+    });
+
     document.addEventListener('DOMContentLoaded', async () => {
       await loadContent();
-
-      // Listen for file change events (watch mode)
-      EventsOn('file-changed', async () => {
-        console.log('File changed, reloading content...');
-        await loadContent();
-      });
     });
 
     // Intercept link clicks and open external links in default browser

@@ -67,6 +67,10 @@ func (a *App) load(path string) error {
 	}
 	a.html = string(htmlBytes)
 	runtime.WindowSetTitle(a.ctx, "mdv — "+path)
+	if a.ctx != nil {
+		// Notify frontend that fresh content is available
+		runtime.EventsEmit(a.ctx, "file-changed")
+	}
 	return nil
 }
 
@@ -181,8 +185,6 @@ func (a *App) startWatch() {
 					runtime.LogErrorf(a.ctx, "Failed to reload file: %v", err)
 					continue
 				}
-				// Notify frontend that content changed
-				runtime.EventsEmit(a.ctx, "file-changed")
 			}
 		case err, ok := <-a.watcher.Errors:
 			if !ok {
