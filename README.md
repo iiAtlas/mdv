@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
 
-**mdv** is a powerful, flexible markdown viewer that works both in the terminal (TUI) and as a native desktop application (GUI). With smart file detection, automatic theme matching, and live reload capabilities, mdv makes reading and previewing markdown effortless.
+**mdv** is a powerful, flexible markdown viewer that works both in the terminal (TUI) and as a native desktop application (GUI). It's built on top of [Glamour](https://github.com/charmbracelet/glamour) and [Goldmark](https://github.com/yuin/goldmark). With smart file detection, automatic theme matching, and live reload capabilities, `mdv` makes reading and previewing markdown effortless _and_ glamorous!
 
 ## Features
 
@@ -15,18 +15,22 @@
 - 🎨 **Automatic Theme Detection** - Matches your system's dark/light mode automatically
 - 🖥️ **Dual Modes** - Use as a TUI (`mdv`) or GUI (`mdv-gui`) application
 - 🔄 **Live Reload** - Watch mode automatically updates when files change
-- ✨ **Beautiful Rendering** - Powered by [Glamour](https://github.com/charmbracelet/glamour) with syntax highlighting
+- ✨ **Beautiful Rendering** - Powered by [Glamour](https://github.com/charmbracelet/glamour) & [Goldmark](https://github.com/yuin/goldmark) for styling
 - 📋 **GitHub Flavored Markdown** - Full support for tables, task lists, strikethrough, and more
-- ⚙️ **Flexible Configuration** - Configure via YAML files, environment variables, or command-line flags
+- ⚙️ **Flexible Configuration** - Configure via YAML files, environment variables, or command-line flags.
 
 ## Installation
 
 ### Homebrew (macOS/Linux)
 
+Easy mode, recommended for most:
 ```bash
 # Install the combined TUI/GUI binary from the Homebrew tap
 brew install --cask iiatlas/tap/mdv
+```
 
+If you only want the TUI or GUI, they can be installed seperately:
+```bash
 # Only need the TUI? Install just the CLI binary
 brew install --cask iiatlas/tap/mdv-tui
 
@@ -36,13 +40,13 @@ brew install --cask iiatlas/tap/mdv-gui
 
 ### Download Binary
 
-Download the latest release for your platform from the [releases page](https://github.com/iiAtlas/mdv/releases).
+Releases are powered by [GoReleaser](https://goreleaser.com/). You can download the latest release for your platform from the [releases page](https://github.com/iiAtlas/mdv/releases).
 
 ### Build from Source
 
 See the [Building from Source](#building-from-source) section below.
 
-## Quick Start
+## Basic Usage
 
 ```bash
 # Auto-detect and open the only markdown file in current directory
@@ -76,23 +80,6 @@ mdv -g --gui-theme dark --gui-width narrow README.md
 mdv-gui --gui-theme light --gui-width wide TECHNICAL.md
 ```
 
-## Usage
-
-### TUI Mode
-
-The terminal interface provides a fast, keyboard-driven experience:
-
-```bash
-# Open a file
-mdv document.md
-
-# Open with watch mode for live editing
-mdv --watch document.md
-
-# Use a specific theme
-mdv -t dark document.md
-```
-
 **Keyboard Shortcuts:**
 
 | Key | Action |
@@ -107,30 +94,6 @@ mdv -t dark document.md
 | `q` / `Esc` / `Ctrl+C` | Quit |
 
 ### GUI Mode
-
-Launch the native desktop application with the `-g` flag or use `mdv-gui` directly:
-
-```bash
-# Launch GUI with a file
-mdv -g README.md
-mdv-gui README.md
-
-# Open multiple files (each in a separate window)
-mdv -g README.md CHANGELOG.md docs/guide.md
-
-# Launch GUI and pick from current directory
-mdv -g
-
-# Launch GUI and pick from a specific directory
-mdv -g examples/
-
-# Customize GUI appearance
-mdv-gui --gui-theme dark --gui-width narrow README.md
-mdv-gui --gui-theme light --gui-width wide docs/API.md
-
-# Use custom CSS theme
-mdv-gui --gui-theme ~/my-theme.css README.md
-```
 
 **Multi-Select Picker (GUI Mode Only):**
 
@@ -162,11 +125,6 @@ mdv --exclude "README.md,draft-*.md" ~/notes/
 
 **Note:** In TUI mode, the picker is single-select. In GUI mode (`-g`), you can stage multiple files with `space` and open them all.
 
-**GUI Keyboard Shortcuts:**
-
-| Key | Action |
-|-----|--------|
-| `e` | Open in editor |
 
 ## Configuration
 
@@ -291,7 +249,7 @@ This allows you to have personalized themes that automatically switch with your 
 
 **Custom Theme JSON Files:**
 
-You can create your own custom themes using Glamour's JSON theme format. Theme values can be either built-in theme names or paths to custom JSON theme files:
+You can create your own custom themes using [Glamour's JSON theme format](https://github.com/charmbracelet/glamour/tree/master/styles). Theme values can be either built-in theme names or paths to custom JSON theme files:
 
 ```yaml
 # Use a built-in theme
@@ -583,6 +541,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+An incredible shout-out is due to the [charm_](https://charm.land/) team for all they've done to make the Command Line _glamorous_.  Thank you!
+
 - Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) for the TUI
 - Styled with [Lipgloss](https://github.com/charmbracelet/lipgloss) and [Glamour](https://github.com/charmbracelet/glamour)
 - GUI powered by [Wails](https://wails.io/)
@@ -590,4 +550,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ by [Atlas](https://github.com/iiAtlas)**
+**Made for fun by [Atlas](https://github.com/iiAtlas)**

@@ -55,6 +55,11 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("invalid config: %w", err)
 		}
 
+		if os.Getenv("MDV_GUI_TEST") == "1" {
+			fmt.Fprintf(cmd.OutOrStdout(), "gui-theme=%s gui-width=%s file=%s\n", cfg.GUITheme, cfg.GUIWidth, cfg.File)
+			return nil
+		}
+
 		// Create application with instance of App structure
 		app := NewApp(cfg)
 

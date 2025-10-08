@@ -55,6 +55,22 @@ func TestLoadThemeCSSCustomFileAndTildeExpansion(t *testing.T) {
 	}
 }
 
+func TestEmbeddedThemesAreAvailable(t *testing.T) {
+	for name := range themeMapping {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			css, err := loadThemeCSS(name)
+			if err != nil {
+				t.Fatalf("expected embedded theme %s to load, got error: %v", name, err)
+			}
+			if !strings.Contains(css, ".markdown-body") {
+				t.Fatalf("expected embedded theme %s CSS to include markdown-body selector", name)
+			}
+		})
+	}
+}
+
 func TestLoadThemeCSSMissingFile(t *testing.T) {
 	if _, err := loadThemeCSS("/does/not/exist.css"); err == nil {
 		t.Fatalf("expected error when custom theme missing")

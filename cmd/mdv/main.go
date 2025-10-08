@@ -436,6 +436,12 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("invalid config: %w", err)
 		}
 
+		if os.Getenv("MDV_CLI_TEST") == "1" {
+			fmt.Fprintf(cmd.OutOrStdout(), "theme=%s wrap=%d gui=%v watch=%v file=%s selections=%d\n",
+				cfg.Theme, cfg.Wrap, cfg.GUI, cfg.Watch, cfg.File, len(selectedFiles))
+			return nil
+		}
+
 		// Check if GUI mode requested
 		if cfg.GUI {
 			// Try to launch mdv-gui if available

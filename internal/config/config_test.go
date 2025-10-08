@@ -295,3 +295,43 @@ func TestDecodeWrapValidation(t *testing.T) {
 		t.Fatalf("expected error for negative wrap, got nil")
 	}
 }
+
+func TestMergeDirectoryConfigMissingFileIsNoOp(t *testing.T) {
+	v := NewViper()
+	v.Set("theme", "dark")
+
+	MergeDirectoryConfig(v, t.TempDir())
+
+	if got := v.GetString("theme"); got != "dark" {
+		t.Fatalf("expected theme to remain unchanged when config missing, got %q", got)
+	}
+}
+
+func TestMergeDirectoryConfigInvalidYAMLIsIgnored(t *testing.T) {
+	restore := withTempWorkingDir(t)
+	defer restore()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".mdv.yaml"), []byte("theme: [broken"), 0o644); err != nil {
+		t.Fatalf("failed to write invalid config: %v", err)
+	}
+
+	v := NewViper()
+	MergeDirectoryConfig(v, dir)
+
+	if got := v.GetString("theme"); got != "auto" {
+		t.Fatalf("expected invalid config to be ignored leaving default 'auto', got %q", got)
+	}
+}
+
+func TestNewViperWithInvalidWrapEnvReturnsZero(t *testing.T) {
+	restore := withTempWorkingDir(t)
+	defer restore()
+
+	t.Setenv("MDV_WRAP", "not-a-number")
+
+	v := NewViper()
+	if got := v.GetInt("wrap"); got != 0 {
+		t.Fatalf("expected invalid wrap env to decode as 0, got %d", got)
+	}
+}

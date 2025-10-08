@@ -1,0 +1,17 @@
+<style>
+html, body { background-color: #101010; margin: 0; padding: 0; }
+.markdown-body {
+  background-color: #101010;
+  color: #f5f5f5;
+  margin: 0;
+  padding: 0;
+}
+
+
+.markdown-body { max-width: 800px; margin-left: auto !important; margin-right: auto !important; }
+</style>
+<div class="markdown-body">
+<h1 id="title">Title</h1>
+<p>Content</p>
+
+</div>

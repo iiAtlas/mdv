@@ -34,6 +34,21 @@ var md = goldmark.New(
 
 // detectSystemTheme detects the system's dark/light mode preference
 func detectSystemTheme() string {
+	// Respect explicit terminal background hint when available.
+	if colorfgbg := os.Getenv("COLORFGBG"); colorfgbg != "" {
+		parts := strings.Split(colorfgbg, ";")
+		if len(parts) > 0 {
+			bgPart := strings.TrimSpace(parts[len(parts)-1])
+			if bg, err := strconv.Atoi(bgPart); err == nil {
+				// Treat low values as dark backgrounds, higher as light.
+				if bg >= 0 && bg <= 8 {
+					return "dark"
+				}
+				return "light"
+			}
+		}
+	}
+
 	switch runtime.GOOS {
 	case "darwin":
 		// macOS: check AppleInterfaceStyle
