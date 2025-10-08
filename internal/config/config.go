@@ -11,19 +11,29 @@ import (
 
 // Config is what the rest of your app reads.
 type Config struct {
-	Theme         string   // "dark", "light", "auto", or custom (for TUI/Glamour)
-	ThemeLight    string   // theme to use when system is in light mode (only applies when Theme is "auto")
-	ThemeDark     string   // theme to use when system is in dark mode (only applies when Theme is "auto")
-	GUITheme      string   // "dark", "light", "auto", or custom CSS file (for GUI/Goldmark)
-	GUIThemeLight string   // GUI theme to use when system is in light mode (only applies when GUITheme is "auto")
-	GUIThemeDark  string   // GUI theme to use when system is in dark mode (only applies when GUITheme is "auto")
-	GUIWidth      string   // "narrow", "medium", "wide", "full" - content width for GUI
-	Wrap          int      // wrap width for terminal rendering
-	GUI           bool     // open GUI (Wails) instead of TUI
-	Watch         bool     // auto-reload on file change
-	Exclude       []string // glob patterns for files to exclude
-	File          string   // markdown file path (positional arg)
-	Editor        string   // editor command to open files (defaults to $EDITOR or "vim")
+	Theme              string              // "dark", "light", "auto", or custom (for TUI/Glamour)
+	ThemeLight         string              // theme to use when system is in light mode (only applies when Theme is "auto")
+	ThemeDark          string              // theme to use when system is in dark mode (only applies when Theme is "auto")
+	GUITheme           string              // "dark", "light", "auto", or custom CSS file (for GUI/Goldmark)
+	GUIThemeLight      string              // GUI theme to use when system is in light mode (only applies when GUITheme is "auto")
+	GUIThemeDark       string              // GUI theme to use when system is in dark mode (only applies when GUITheme is "auto")
+	GUIWidth           string              // "narrow", "medium", "wide", "full" - content width for GUI
+	Wrap               int                 // wrap width for terminal rendering
+	GUI                bool                // open GUI (Wails) instead of TUI
+	Watch              bool                // auto-reload on file change
+	Exclude            []string            // glob patterns for files to exclude
+	File               string              // markdown file path (positional arg)
+	Editor             string              // editor command to open files (defaults to $EDITOR or "vim")
+	GoldmarkExtensions []GoldmarkExtension // custom Goldmark extensions to load when rendering HTML
+}
+
+// GoldmarkExtension describes a dynamically loaded Goldmark extension.
+// Users can provide shared objects compiled with -buildmode=plugin that expose
+// either a goldmark.Extender or a func() goldmark.Extender under the configured
+// symbol name (defaults to "Extension").
+type GoldmarkExtension struct {
+	Path   string `mapstructure:"path"`
+	Symbol string `mapstructure:"symbol"`
 }
 
 // NewViper sets up Viper with sensible defaults and search paths.
@@ -117,22 +127,22 @@ func MergeDirectoryConfig(v *viper.Viper, dir string) {
 	}
 }
 
-// resolveThemePath resolves a theme path relative to the config directory.
+// resolveConfigPath resolves a path relative to the config directory.
 // If the path is absolute or home-relative (~), returns it as-is.
 // If the path is relative, tries to resolve it relative to configDir.
 // If the resolved file exists, returns the absolute path; otherwise returns the original path.
-func resolveThemePath(themePath, configDir string) string {
-	if themePath == "" {
-		return themePath
+func resolveConfigPath(pathValue, configDir string) string {
+	if pathValue == "" {
+		return pathValue
 	}
 
 	// If absolute path or starts with ~, return as-is (will be handled by render package)
-	if filepath.IsAbs(themePath) || themePath[0] == '~' {
-		return themePath
+	if filepath.IsAbs(pathValue) || pathValue[0] == '~' {
+		return pathValue
 	}
 
 	// If relative path, try to resolve relative to config directory
-	resolvedPath := filepath.Join(configDir, themePath)
+	resolvedPath := filepath.Join(configDir, pathValue)
 
 	// Check if the resolved path exists
 	if _, err := os.Stat(resolvedPath); err == nil {
@@ -145,19 +155,19 @@ func resolveThemePath(themePath, configDir string) string {
 
 	// File doesn't exist or error getting absolute path, return original
 	// (might be a built-in theme name)
-	return themePath
+	return pathValue
 }
 
 // Decode pulls values from Viper into a typed Config.
 // configDir is the directory containing the config file being used (typically the directory of the file being viewed).
 func Decode(v *viper.Viper, fileArg string, configDir string) (Config, error) {
 	cfg := Config{
-		Theme:         resolveThemePath(v.GetString("theme"), configDir),
-		ThemeLight:    resolveThemePath(v.GetString("theme-light"), configDir),
-		ThemeDark:     resolveThemePath(v.GetString("theme-dark"), configDir),
-		GUITheme:      resolveThemePath(v.GetString("gui-theme"), configDir),
-		GUIThemeLight: resolveThemePath(v.GetString("gui-theme-light"), configDir),
-		GUIThemeDark:  resolveThemePath(v.GetString("gui-theme-dark"), configDir),
+		Theme:         resolveConfigPath(v.GetString("theme"), configDir),
+		ThemeLight:    resolveConfigPath(v.GetString("theme-light"), configDir),
+		ThemeDark:     resolveConfigPath(v.GetString("theme-dark"), configDir),
+		GUITheme:      resolveConfigPath(v.GetString("gui-theme"), configDir),
+		GUIThemeLight: resolveConfigPath(v.GetString("gui-theme-light"), configDir),
+		GUIThemeDark:  resolveConfigPath(v.GetString("gui-theme-dark"), configDir),
 		GUIWidth:      v.GetString("gui-width"),
 		Wrap:          v.GetInt("wrap"),
 		GUI:           v.GetBool("gui"),
@@ -166,6 +176,21 @@ func Decode(v *viper.Viper, fileArg string, configDir string) (Config, error) {
 		File:          fileArg,
 		Editor:        v.GetString("editor"),
 	}
+
+	var goldmarkConfig struct {
+		Extensions []GoldmarkExtension `mapstructure:"extensions"`
+	}
+	if err := v.UnmarshalKey("goldmark", &goldmarkConfig); err != nil {
+		return cfg, fmt.Errorf("invalid goldmark config: %w", err)
+	}
+	for i := range goldmarkConfig.Extensions {
+		goldmarkConfig.Extensions[i].Path = resolveConfigPath(goldmarkConfig.Extensions[i].Path, configDir)
+		if goldmarkConfig.Extensions[i].Symbol == "" {
+			goldmarkConfig.Extensions[i].Symbol = "Extension"
+		}
+	}
+	cfg.GoldmarkExtensions = goldmarkConfig.Extensions
+
 	if cfg.Wrap < 0 {
 		return cfg, fmt.Errorf("wrap must be >= 0")
 	}

@@ -221,7 +221,36 @@ exclude:
   - README.md
   - "draft-*.md"
   - "*-wip.md"
+
+# Load additional Goldmark extensions compiled as Go plugins
+# goldmark:
+#   extensions:
+#     - path: "~/.config/mdv/extensions/alerts.so"
+#       symbol: "Extension"  # optional, defaults to "Extension"
 ```
+
+### Custom Goldmark extensions
+
+The GUI renderer uses [Goldmark](https://github.com/yuin/goldmark). You can
+load additional Goldmark extensions by compiling them as Go plugins and listing
+them in your config file. Each extension entry must point to a `.so` file built
+with `go build -buildmode=plugin` that exports either a `goldmark.Extender`
+value or a `func() goldmark.Extender` under the configured symbol name (default:
+`Extension`).
+
+```bash
+go build -buildmode=plugin -o ~/.config/mdv/extensions/alerts.so ./cmd/alerts
+```
+
+```yaml
+goldmark:
+  extensions:
+    - path: "~/.config/mdv/extensions/alerts.so"
+      symbol: "Extension" # optional override
+```
+
+> **Note:** Loading plugins is not supported on Windows. mdv will return an
+> error at runtime if Goldmark extensions are configured on that platform.
 
 ### Environment Variables
 
