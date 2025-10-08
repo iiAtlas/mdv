@@ -62,16 +62,12 @@ archives:
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else }}{{ .Arch }}{{ end }}
-    format_overrides:
-      - goos: windows
-        formats:
-          - zip
     files:
       - src: LICENSE*
       - src: README*
-      - src: examples/**/*
-      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
-        dst: mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
+      - src: examples
+      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui
+        dst: mdv-gui
   - id: mdv-tui-archive
     ids:
       - mdv-cross
@@ -89,13 +85,10 @@ archives:
     files:
       - src: LICENSE*
       - src: README*
-      - src: examples/**/*
+      - src: examples
   - id: mdv-gui-archive
     ids:
       - mdv-darwin
-    files:
-      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
-        dst: mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
     name_template: >-
       {{ .ProjectName }}-
       gui_
@@ -103,10 +96,9 @@ archives:
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else }}{{ .Arch }}{{ end }}
-    format_overrides:
-      - goos: windows
-        formats:
-          - zip
+    files:
+      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui
+        dst: mdv-gui
 
 checksum:
   name_template: 'checksums.txt'
