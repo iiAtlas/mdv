@@ -10,26 +10,37 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/iiatlas/mdv/internal/config"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 )
 
-var md = goldmark.New(
-	goldmark.WithExtensions(
-		extension.GFM,            // tables, strikethrough, task lists
-		extension.Table,          // explicit table extension (redundant, ok)
-		extension.Linkify,        // autolink URLs
-		extension.Strikethrough,  // ~~del~~
-	),
-	goldmark.WithParserOptions(
-		parser.WithAutoHeadingID(),
-	),
-	goldmark.WithRendererOptions(
-		html.WithUnsafe(), // allow inline HTML in markdown
-	),
-)
+func newGoldmark(extConfigs []config.GoldmarkExtension) (goldmark.Markdown, error) {
+	baseExtensions := []goldmark.Extender{
+		extension.GFM,
+		extension.Table,
+		extension.Linkify,
+		extension.Strikethrough,
+	}
+
+	customExtensions, err := loadCustomExtensions(extConfigs)
+	if err != nil {
+		return nil, err
+	}
+	baseExtensions = append(baseExtensions, customExtensions...)
+
+	return goldmark.New(
+		goldmark.WithExtensions(baseExtensions...),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(), // allow inline HTML in markdown
+		),
+	), nil
+}
 
 // detectSystemTheme detects the system's dark/light mode preference
 func detectSystemTheme() string {
@@ -87,7 +98,12 @@ func ResolveTheme(theme, themeLight, themeDark string) string {
 	return detected
 }
 
-func ToHTML(src []byte, theme, themeLight, themeDark, width string) ([]byte, error) {
+func ToHTML(src []byte, theme, themeLight, themeDark, width string, extensions []config.GoldmarkExtension) ([]byte, error) {
+	md, err := newGoldmark(extensions)
+	if err != nil {
+		return nil, err
+	}
+
 	// Convert markdown to HTML
 	var buf bytes.Buffer
 	if err := md.Convert(src, &buf); err != nil {

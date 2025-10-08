@@ -68,13 +68,13 @@ task clean
    - Uses Viper for layered config (flags > directory .mdv.yaml > local .mdv.yaml > ~/.config/mdv/config.yaml > env vars)
    - Directory-specific configs: when viewing a file, mdv checks for .mdv.yaml in that file's directory
    - Environment variables: MDV_THEME, MDV_THEME_LIGHT, MDV_THEME_DARK, MDV_WRAP, MDV_WATCH, MDV_GUI, MDV_EXCLUDE, MDV_EDITOR
-   - Config struct: Theme, ThemeLight, ThemeDark, Wrap, GUI, Watch, Exclude, File, Editor
+   - Config struct: Theme, ThemeLight, ThemeDark, Wrap, GUI, Watch, Exclude, File, Editor, GoldmarkExtensions (plugin metadata)
    - Setting `gui: true` in config makes `mdv` launch in GUI mode by default (equivalent to `-g` flag)
 
 4. **internal/render/** - Markdown rendering
    - `ToANSI()`: Converts markdown to ANSI for terminal (uses Glamour)
    - `ToHTML()`: Converts markdown to HTML for GUI (uses Goldmark)
-   - Goldmark configured with GitHub Flavored Markdown extensions
+   - Goldmark configured with GitHub Flavored Markdown extensions and can load user-provided plugins from config
    - Theme auto-detection: checks macOS AppleInterfaceStyle or Linux COLORFGBG (internal/render/render.go:33-63)
 
 ### Key Features

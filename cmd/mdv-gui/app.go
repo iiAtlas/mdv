@@ -61,7 +61,7 @@ func (a *App) load(path string) error {
 	if err != nil {
 		return err
 	}
-	htmlBytes, err := render.ToHTML(b, a.cfg.GUITheme, a.cfg.GUIThemeLight, a.cfg.GUIThemeDark, a.cfg.GUIWidth)
+	htmlBytes, err := render.ToHTML(b, a.cfg.GUITheme, a.cfg.GUIThemeLight, a.cfg.GUIThemeDark, a.cfg.GUIWidth, a.cfg.GoldmarkExtensions)
 	if err != nil {
 		return err
 	}
