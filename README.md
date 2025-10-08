@@ -1,6 +1,6 @@
 # mdv
 
-> A modern markdown viewer with dual TUI and GUI modes
+> A handy markdown viewer with dual TUI and GUI modes
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev/)
