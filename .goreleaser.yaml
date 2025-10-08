@@ -15,15 +15,32 @@ before:
     - ./scripts/build-wails.sh
 
 builds:
-  # TUI binary (mdv)
-  - id: mdv
+  # TUI binary (mdv) - macOS variants packaged with GUI bundle
+  - id: mdv-darwin
+    binary: mdv
+    main: ./cmd/mdv
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+  # TUI binary (mdv) - cross-platform CLI package
+  - id: mdv-cross
     binary: mdv
     main: ./cmd/mdv
     env:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
       - windows
     goarch:
       - amd64
@@ -38,7 +55,7 @@ builds:
 archives:
   - id: mdv-mac-archive
     ids:
-      - mdv
+      - mdv-darwin
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -57,7 +74,7 @@ archives:
         dst: mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
   - id: mdv-tui-archive
     ids:
-      - mdv
+      - mdv-cross
     name_template: >-
       {{ .ProjectName }}-
       tui_
@@ -74,7 +91,8 @@ archives:
       - src: README*
       - src: examples/**/*
   - id: mdv-gui-archive
-    builds: []
+    ids:
+      - mdv-darwin
     files:
       - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
         dst: mdv-gui{{ if eq .Os "windows" }}.exe{{ end }}
