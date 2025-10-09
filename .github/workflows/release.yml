@@ -34,9 +34,8 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
-          MACOS_SIGN_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
-          MACOS_NOTARY_KEY: ${{ secrets.AC_PASSWORD }}
-          MACOS_NOTARY_KEY_ID: ${{ secrets.AC_USERNAME }}
-          MACOS_NOTARY_ISSUER_ID: ${{ secrets.AC_PROVIDER }}
-          MACOS_NOTARY_TEAM_ID: ${{ secrets.AC_TEAM_ID }}
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }} # base64-encoded .p12 certificate
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }} # base64-encoded App Store Connect .p8 key
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
