@@ -39,8 +39,9 @@ jobs:
           # Allow codesign to access the certificate
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ secrets.CERTIFICATE_PASSWORD }}" build.keychain
 
-          # Save API key to file for notarization
-          echo "${{ secrets.AC_PASSWORD }}" > AuthKey.p8
+          # Save App Store Connect API key to file
+          printf '%s' "${{ secrets.AC_PASSWORD }}" > "${RUNNER_TEMP}/AuthKey.p8"
+          chmod 600 "${RUNNER_TEMP}/AuthKey.p8"
 
           # Clean up certificate
           rm certificate.p12
@@ -55,6 +56,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           CODESIGN_IDENTITY: "Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)"
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
-          AC_PASSWORD: ${{ github.workspace }}/AuthKey.p8
+          AC_PASSWORD: "@file:${{ runner.temp }}/AuthKey.p8"
           AC_TEAM_ID: ${{ secrets.AC_TEAM_ID }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+
+      - name: Clean up temporary key file
+        if: ${{ always() }}
+        run: rm -f "${RUNNER_TEMP}/AuthKey.p8"
