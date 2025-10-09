@@ -68,6 +68,14 @@ notarize:
     - enabled: '{{ if index .Env "AC_USERNAME" }}true{{ else }}false{{ end }}'
       ids:
         - mdv-mac-archive
+      sign:
+        certificate: '{{ .Env.CERTIFICATE_BASE64 }}'
+        password: '{{ .Env.CERTIFICATE_PASSWORD }}'
+        entitlements: cmd/mdv-gui/entitlements.plist
+      notarize:
+        key_id: '{{ .Env.AC_USERNAME }}'
+        issuer_id: '{{ .Env.AC_PROVIDER }}'
+        key: '{{ .Env.AC_PASSWORD }}'
 
 archives:
   - id: mdv-mac-archive

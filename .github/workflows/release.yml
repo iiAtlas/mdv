@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -27,24 +28,31 @@ jobs:
 
       - name: Set up Code Signing & Notarization
         run: |
+          set -euo pipefail
+
+          KEYCHAIN=build.keychain
+          CERT_PATH="${RUNNER_TEMP}/certificate.p12"
+          AUTH_KEY_PATH="${RUNNER_TEMP}/AuthKey.p8"
+
           # Create a temporary keychain
-          security create-keychain -p "${{ secrets.CERTIFICATE_PASSWORD }}" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "${{ secrets.CERTIFICATE_PASSWORD }}" build.keychain
+          security create-keychain -p "${{ secrets.CERTIFICATE_PASSWORD }}" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "${{ secrets.CERTIFICATE_PASSWORD }}" "$KEYCHAIN"
 
           # Import certificate
-          echo "${{ secrets.CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
-          security import certificate.p12 -k build.keychain -P "${{ secrets.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          printf '%s' "${{ secrets.CERTIFICATE_BASE64 }}" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN" -P "${{ secrets.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
 
           # Allow codesign to access the certificate
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ secrets.CERTIFICATE_PASSWORD }}" build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ secrets.CERTIFICATE_PASSWORD }}" "$KEYCHAIN"
 
-          # Save App Store Connect API key to file
-          printf '%s' "${{ secrets.AC_PASSWORD }}" > "${{ github.workspace }}/AuthKey.p8"
-          chmod 600 "${{ github.workspace }}/AuthKey.p8"
+          # Save App Store Connect API key to file and expose path for later steps
+          printf '%s' "${{ secrets.AC_PASSWORD }}" > "$AUTH_KEY_PATH"
+          chmod 600 "$AUTH_KEY_PATH"
+          echo "AC_PASSWORD_FILE=$AUTH_KEY_PATH" >> "$GITHUB_ENV"
 
           # Clean up certificate
-          rm certificate.p12
+          rm -f "$CERT_PATH"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6.4.0
@@ -56,10 +64,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           CODESIGN_IDENTITY: "Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)"
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
-          AC_PASSWORD: "${{ github.workspace }}/AuthKey.p8"
+          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
+          CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          AC_PASSWORD_FILE: ${{ env.AC_PASSWORD_FILE }}
           AC_TEAM_ID: ${{ secrets.AC_TEAM_ID }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
 
       - name: Clean up temporary key file
         if: ${{ always() }}
-        run: rm -f "${{ github.workspace }}/AuthKey.p8"
+        run: |
+          security delete-keychain build.keychain || true
+          if [[ -n "${AC_PASSWORD_FILE:-}" ]]; then
+            rm -f "$AC_PASSWORD_FILE"
+          fi
