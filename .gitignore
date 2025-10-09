@@ -49,5 +49,12 @@ coverage.out
 
 github_token
 
+*.p8
+*.p12
+
+# Environment files with secrets
+.env
+.env.local
+
 # Build artifacts
 dist/

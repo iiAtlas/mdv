@@ -22,7 +22,10 @@
   "wailsjsdir": "./frontend",
   "platforms": {
     "darwin": {
-      "icon": "./frontend/assets/mdv-app-icon.png"
+      "icon": "./frontend/assets/mdv-app-icon.png",
+      "sign": true,
+      "identity": "Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)",
+      "entitlements": "entitlements.plist"
     },
     "linux": {
       "icon": "./frontend/assets/mdv-app-icon.png"

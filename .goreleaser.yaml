@@ -47,6 +47,28 @@ builds:
       - -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+signs:
+  - ids:
+      - mdv-darwin
+    cmd: codesign
+    signature: "${artifact}.sig"
+    args:
+      - --force
+      - --sign
+      - "Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)"
+      - --options
+      - runtime
+      - --entitlements
+      - cmd/mdv-gui/entitlements.plist
+      - --timestamp
+      - "${artifact}"
+
+notarize:
+  macos:
+    - enabled: '{{ if index .Env "AC_USERNAME" }}true{{ else }}false{{ end }}'
+      ids:
+        - mdv-mac-archive
+
 archives:
   - id: mdv-mac-archive
     ids:
