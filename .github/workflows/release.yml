@@ -35,8 +35,6 @@ jobs:
           KEYCHAIN_PATH="${RUNNER_TEMP}/${KEYCHAIN_NAME}"
           CERT_RAW_PATH="${RUNNER_TEMP}/certificate_raw.p12"
           CERT_TRIMMED_PATH="${RUNNER_TEMP}/certificate_trimmed.p12"
-          CERT_PEM_PATH="${RUNNER_TEMP}/certificate.pem"
-          KEY_PEM_PATH="${RUNNER_TEMP}/certificate_key.pem"
           AUTH_KEY_PATH="${RUNNER_TEMP}/AuthKey.p8"
 
           # Create a temporary keychain
@@ -46,13 +44,12 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
 
-          # Prepare certificate: decode, normalize to a single identity, and import
+          # Import certificate and re-export a clean PKCS#12 bundle for GoReleaser
           printf '%s' "${{ secrets.CERTIFICATE_BASE64 }}" | base64 --decode > "$CERT_RAW_PATH"
-          openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -clcerts -nokeys -out "$CERT_PEM_PATH"
-          openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -nocerts -nodes -out "$KEY_PEM_PATH"
-          openssl pkcs12 -export -inkey "$KEY_PEM_PATH" -in "$CERT_PEM_PATH" -out "$CERT_TRIMMED_PATH" -passout pass:"$KEYCHAIN_PASSWORD"
+          security import "$CERT_RAW_PATH" -k "$KEYCHAIN_PATH" -P "$KEYCHAIN_PASSWORD" -T /usr/bin/codesign
+          security export -k "$KEYCHAIN_PATH" -t identities -f pkcs12 -P "$KEYCHAIN_PASSWORD" -o "$CERT_TRIMMED_PATH"
           security import "$CERT_TRIMMED_PATH" -k "$KEYCHAIN_PATH" -P "$KEYCHAIN_PASSWORD" -T /usr/bin/codesign
-          rm -f "$CERT_RAW_PATH" "$CERT_PEM_PATH" "$KEY_PEM_PATH"
+          rm -f "$CERT_RAW_PATH"
 
           # Allow codesign to access the certificate
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
