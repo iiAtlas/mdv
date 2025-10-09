@@ -63,20 +63,6 @@ signs:
       - --timestamp
       - "${artifact}"
 
-notarize:
-  macos:
-    - enabled: '{{ if index .Env "AC_USERNAME" }}true{{ else }}false{{ end }}'
-      ids:
-        - mdv-darwin
-      sign:
-        certificate: '{{ .Env.CERTIFICATE_P12_PATH }}'
-        password: '{{ .Env.CERTIFICATE_PASSWORD }}'
-        entitlements: cmd/mdv-gui/entitlements.plist
-      notarize:
-        key_id: '{{ .Env.AC_USERNAME }}'
-        issuer_id: '{{ .Env.AC_PROVIDER }}'
-        key: '@file:{{ .Env.AC_PASSWORD_FILE }}'
-
 archives:
   - id: mdv-mac-archive
     ids:

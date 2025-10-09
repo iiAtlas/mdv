@@ -57,7 +57,24 @@ jobs:
           else
             openssl pkcs12 -export -inkey "$KEY_PEM_PATH" -in "$CERT_PEM_PATH" -out "$CERT_TRIMMED_PATH" -passout pass:"$KEYCHAIN_PASSWORD"
           fi
+
+          echo "=== Primary certificate details ==="
+          openssl x509 -noout -text -in "$CERT_PEM_PATH"
+
+          echo "=== Chain certificate details ==="
+          if [[ -s "$CHAIN_PEM_PATH" ]]; then
+            openssl x509 -noout -text -in "$CHAIN_PEM_PATH"
+          else
+            echo "(no chain certificates found)"
+          fi
+
+          echo "=== Identities in temporary keychain before re-import ==="
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+
           security import "$CERT_TRIMMED_PATH" -k "$KEYCHAIN_PATH" -P "$KEYCHAIN_PASSWORD" -T /usr/bin/codesign
+          echo "=== Identities in temporary keychain after re-import ==="
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+
           rm -f "$CERT_RAW_PATH" "$CERT_PEM_PATH" "$KEY_PEM_PATH" "$CHAIN_PEM_PATH"
 
           # Allow codesign to access the certificate
@@ -87,6 +104,41 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_PASSWORD_FILE: ${{ env.AC_PASSWORD_FILE }}
+
+      - name: Notarize macOS artifacts
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f "${AC_PASSWORD_FILE}" ]]; then
+            echo "AC password file missing at ${AC_PASSWORD_FILE}" >&2
+            exit 1
+          fi
+
+          shopt -s nullglob
+          artifacts=(dist/*darwin*.zip dist/*darwin*.tar.gz dist/*darwin*.pkg)
+          if (( ${#artifacts[@]} == 0 )); then
+            echo "No darwin artifacts found to notarize."
+          fi
+
+          for artifact in "${artifacts[@]}"; do
+            echo "Submitting $artifact for notarization"
+            xcrun notarytool submit "$artifact" \
+              --key "$AC_PASSWORD_FILE" \
+              --key-id "${{ secrets.AC_USERNAME }}" \
+              --issuer "${{ secrets.AC_PROVIDER }}" \
+              --team-id "${{ secrets.AC_TEAM_ID }}" \
+              --wait
+          done
+
+          bundles=(dist/mdv-darwin_*/mdv dist/mdv-darwin_*/mdv-gui dist/*/*.app)
+          for bundle in "${bundles[@]}"; do
+            if [[ -e "$bundle" ]]; then
+              echo "Stapling ticket to $bundle"
+              xcrun stapler staple "$bundle" || echo "Stapler failed for $bundle (non-fatal)"
+            fi
+          done
+        env:
           AC_PASSWORD_FILE: ${{ env.AC_PASSWORD_FILE }}
 
       - name: Clean up temporary key file
