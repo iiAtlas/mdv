@@ -73,3 +73,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Verify macOS signatures
+        run: ./scripts/verify-macos-signatures.sh
