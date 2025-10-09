@@ -69,13 +69,13 @@ notarize:
       ids:
         - mdv-mac-archive
       sign:
-        certificate: '{{ .Env.CERTIFICATE_BASE64 }}'
+        certificate: '{{ .Env.CERTIFICATE_P12_PATH }}'
         password: '{{ .Env.CERTIFICATE_PASSWORD }}'
         entitlements: cmd/mdv-gui/entitlements.plist
       notarize:
         key_id: '{{ .Env.AC_USERNAME }}'
         issuer_id: '{{ .Env.AC_PROVIDER }}'
-        key: '{{ .Env.AC_PASSWORD }}'
+        key: '@file:{{ .Env.AC_PASSWORD_FILE }}'
 
 archives:
   - id: mdv-mac-archive
