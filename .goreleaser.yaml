@@ -27,6 +27,10 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
+    hooks:
+      post:
+        - ./scripts/sign-macos.sh {{ .Path }}
+        - ./scripts/notarize-macos.sh {{ .Path }}
 
   # TUI binary (mdv) - cross-platform CLI package
   - id: mdv-cross
@@ -46,21 +50,6 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
-
-notarize:
-  macos:
-    - enabled: '{{ and (isEnvSet "MACOS_SIGN_P12") (isEnvSet "MACOS_SIGN_PASSWORD") }}'
-      ids:
-        - mdv-darwin
-      sign:
-        certificate: '{{ .Env.MACOS_SIGN_P12 }}'
-        password: '{{ .Env.MACOS_SIGN_PASSWORD }}'
-        entitlements: cmd/mdv-gui/entitlements.plist
-      notarize:
-        issuer_id: '{{ .Env.MACOS_NOTARY_ISSUER_ID }}'
-        key_id: '{{ .Env.MACOS_NOTARY_KEY_ID }}'
-        key: '{{ .Env.MACOS_NOTARY_KEY }}'
-        wait: true
 
 archives:
   - id: mdv-mac-archive
