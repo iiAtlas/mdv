@@ -50,8 +50,8 @@ jobs:
           # Import certificate and re-export a clean PKCS#12 bundle for GoReleaser
           printf '%s' "${{ secrets.CERTIFICATE_BASE64 }}" | base64 --decode > "$CERT_RAW_PATH"
           openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -nocerts -nodes -out "$KEY_PEM_PATH"
-          openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -clcerts -nokeys -out "$CERT_PEM_PATH"
-          openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -cacerts -nokeys -out "$CHAIN_PEM_PATH" || touch "$CHAIN_PEM_PATH"
+          openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -clcerts -nokeys -out "$CERT_PEM_PATH" -certpbe AES-256-CBC -macalg sha256
+          openssl pkcs12 -in "$CERT_RAW_PATH" -passin pass:"$KEYCHAIN_PASSWORD" -cacerts -nokeys -out "$CHAIN_PEM_PATH" -certpbe AES-256-CBC -macalg sha256 || touch "$CHAIN_PEM_PATH"
           if [[ -s "$CHAIN_PEM_PATH" ]]; then
             openssl pkcs12 -export -inkey "$KEY_PEM_PATH" -in "$CERT_PEM_PATH" -certfile "$CHAIN_PEM_PATH" -out "$CERT_TRIMMED_PATH" -passout pass:"$KEYCHAIN_PASSWORD"
           else
