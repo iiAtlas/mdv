@@ -37,19 +37,30 @@ for platform in ${PLATFORMS//,/ }; do
   IFS='/' read -r os arch <<<"$platform"
   case "$os" in
     darwin)
-      bundle="$BIN_DIR/mdv-gui-${arch}.app"
-      if [[ ! -d "$bundle" ]]; then
-        # Wails emits unsuffixed bundle names when targeting a single arch.
-        bundle="$BIN_DIR/mdv-gui.app"
-      fi
-      if [[ -d "$bundle" ]]; then
+      # Wails naming changed between releases. Try several known variants.
+      bundle_candidates=(
+        "$BIN_DIR/mdv-gui-${arch}.app"
+        "$BIN_DIR/mdv-gui-${os}-${arch}.app"
+        "$BIN_DIR/mdv-gui.app"
+        "$BIN_DIR/mdv-gui-${arch}"
+      )
+      bundle=""
+      for candidate in "${bundle_candidates[@]}"; do
+        if [[ -d "$candidate" ]]; then
+          bundle="$candidate"
+          break
+        fi
+      done
+
+      if [[ -n "$bundle" ]]; then
         dest="$BIN_DIR/mdv-gui_${os}_${arch}"
         rm -rf "$dest"
         mkdir -p "$dest"
         cp -R "$bundle" "$dest/mdv-gui.app"
         cp "$bundle/Contents/MacOS/mdv-gui" "$dest/mdv-gui"
       else
-        echo "[wails] warning: expected bundle ${bundle} not found" >&2
+        echo "[wails] warning: expected bundle for ${os}/${arch} not found" >&2
+        rmdir "$dest" 2>/dev/null || true
       fi
       ;;
     windows)
