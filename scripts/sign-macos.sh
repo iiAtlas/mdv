@@ -2,15 +2,16 @@
 
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-  echo "usage: $0 <binary-path>" >&2
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  echo "usage: $0 <path-to-binary-or-bundle> [entitlements]" >&2
   exit 1
 fi
 
 binary_path="$1"
+entitlements="${2:-${MACOS_SIGN_ENTITLEMENTS:-}}"
 
-if [[ ! -f "$binary_path" ]]; then
-  echo "sign-macos: binary not found at $binary_path" >&2
+if [[ ! -f "$binary_path" && ! -d "$binary_path" ]]; then
+  echo "sign-macos: target not found at $binary_path" >&2
   exit 1
 fi
 
@@ -20,23 +21,31 @@ if [[ -z "$codesign_identity" ]]; then
   exit 1
 fi
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "${script_dir}/.." && pwd)"
-entitlements="${repo_root}/cmd/mdv-gui/entitlements.plist"
-
-if [[ ! -f "$entitlements" ]]; then
-  echo "sign-macos: entitlements file not found at $entitlements" >&2
-  exit 1
+if [[ -n "$entitlements" ]]; then
+  if [[ ! -f "$entitlements" ]]; then
+    echo "sign-macos: entitlements file not found at $entitlements" >&2
+    exit 1
+  fi
 fi
 
 echo "sign-macos: signing $(basename "$binary_path") with identity '$codesign_identity'"
 
-codesign --force \
-  --options runtime \
-  --timestamp \
-  --entitlements "$entitlements" \
-  --sign "$codesign_identity" \
-  "$binary_path"
+codesign_args=(
+  --force
+  --options runtime
+  --timestamp
+  --sign "$codesign_identity"
+)
+
+if [[ -n "$entitlements" ]]; then
+  codesign_args+=(--entitlements "$entitlements")
+fi
+
+if [[ -d "$binary_path" ]]; then
+  codesign_args+=(--deep)
+fi
+
+codesign "${codesign_args[@]}" "$binary_path"
 
 codesign --verify --deep --strict "$binary_path"
 

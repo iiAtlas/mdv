@@ -8,6 +8,7 @@ before:
     # Ensure dependencies are up to date
     - go mod tidy
     - ./scripts/build-wails.sh
+    - ./scripts/sign-gui-assets.sh
 
 builds:
   # TUI binary (mdv) - macOS variants packaged with GUI bundle

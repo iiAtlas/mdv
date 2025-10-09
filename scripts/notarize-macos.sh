@@ -9,8 +9,8 @@ fi
 
 binary_path="$1"
 
-if [[ ! -f "$binary_path" ]]; then
-  echo "notarize-macos: binary not found at $binary_path" >&2
+if [[ ! -f "$binary_path" && ! -d "$binary_path" ]]; then
+  echo "notarize-macos: target not found at $binary_path" >&2
   exit 1
 fi
 
