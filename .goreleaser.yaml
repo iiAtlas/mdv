@@ -68,6 +68,8 @@ archives:
       - src: examples
       - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui
         dst: mdv-gui
+      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui.app
+        dst: mdv-gui.app
   - id: mdv-tui-archive
     ids:
       - mdv-cross
@@ -99,6 +101,8 @@ archives:
     files:
       - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui
         dst: mdv-gui
+      - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui.app
+        dst: mdv-gui.app
 
 checksum:
   name_template: 'checksums.txt'
