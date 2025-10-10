@@ -75,6 +75,24 @@ func detectSystemTheme() string {
 		}
 		// Default to dark for Linux
 		return "dark"
+	case "windows":
+		// Windows: query registry for system theme preference
+		// HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+		// AppsUseLightTheme: 0x0 = dark, 0x1 = light
+		cmd := exec.Command("reg", "query",
+			"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+			"/v", "AppsUseLightTheme")
+		output, err := cmd.Output()
+		if err == nil {
+			// Parse registry output
+			// Output format: "    AppsUseLightTheme    REG_DWORD    0x0" or "0x1"
+			if strings.Contains(string(output), "0x0") {
+				return "dark"
+			}
+			return "light"
+		}
+		// Fallback to dark if registry query fails
+		return "dark"
 	default:
 		// Default to dark for other platforms
 		return "dark"

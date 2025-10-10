@@ -1,0 +1,38 @@
+# Dockerfile for building mdv Linux GUI
+# This allows local testing of Linux builds without requiring a Linux VM
+#
+# Build: docker build -f scripts/docker/Dockerfile.linux-build -t mdv-linux-builder .
+# Run:   docker run --rm -v "$PWD:/workspace" mdv-linux-builder
+
+# Force linux/amd64 platform for consistency (works on both Intel and Apple Silicon Macs)
+FROM --platform=linux/amd64 ubuntu:22.04
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    libgtk-3-dev \
+    libwebkit2gtk-4.0-dev \
+    pkg-config \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go 1.24
+ARG GO_VERSION=1.24.8
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+# Force Go to use the installed toolchain version, not download newer ones
+ENV GOTOOLCHAIN=local
+
+# Install Wails CLI
+RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command: build Linux GUI for amd64
+# Override with: docker run ... mdv-linux-builder <command>
+CMD ["sh", "-c", "WAILS_PLATFORMS=linux/amd64 ./scripts/build-wails.sh"]

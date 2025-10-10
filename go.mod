@@ -1,6 +1,8 @@
 module github.com/iiatlas/mdv
 
-go 1.25.1
+go 1.24.0
+
+toolchain go1.24.8
 
 require (
 	github.com/charmbracelet/bubbles v0.21.0
