@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
     libwebkit2gtk-4.0-dev \
     pkg-config \
     ca-certificates \
+    gcc-aarch64-linux-gnu \
+    libc6-dev-arm64-cross \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go 1.24

@@ -12,18 +12,29 @@ permissions:
 jobs:
   # Build GUI binaries on native platforms
   build-gui:
-    name: Build GUI (${{ matrix.os }})
+    name: Build GUI (${{ matrix.name }})
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
-            platforms: linux/amd64,linux/arm64
-            artifact-name: gui-linux
-          - os: macos-latest
+          - name: linux-amd64
+            os: ubuntu-22.04
+            platforms: linux/amd64
+            cc: gcc
+            artifact-name: gui-linux-amd64
+          - name: linux-arm64
+            os: ubuntu-22.04
+            platforms: linux/arm64
+            cc: aarch64-linux-gnu-gcc
+            artifact-name: gui-linux-arm64
+          - name: macos
+            os: macos-latest
             platforms: darwin/amd64,darwin/arm64
+            cc: ""
             artifact-name: gui-macos
-          - os: windows-latest
+          - name: windows
+            os: windows-latest
             platforms: windows/amd64
+            cc: ""
             artifact-name: gui-windows
     runs-on: ${{ matrix.os }}
     steps:
@@ -44,7 +55,12 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            build-essential \
+            gcc-aarch64-linux-gnu \
+            libc6-dev-arm64-cross
 
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
@@ -55,6 +71,7 @@ jobs:
       - name: Build GUI
         env:
           WAILS_PLATFORMS: ${{ matrix.platforms }}
+          CC: ${{ matrix.cc }}
         run: ./scripts/build-wails.sh
 
       - name: Upload GUI artifacts
