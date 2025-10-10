@@ -22,10 +22,9 @@ jobs:
           - os: macos-latest
             platforms: darwin/amd64,darwin/arm64
             artifact-name: gui-macos
-          # Windows builds can be added when needed:
-          # - os: windows-latest
-          #   platforms: windows/amd64
-          #   artifact-name: gui-windows
+          - os: windows-latest
+            platforms: windows/amd64
+            artifact-name: gui-windows
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -46,6 +45,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw -y
+          refreshenv
 
       - name: Build GUI
         env:
@@ -168,6 +173,47 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         run: |
           for archive in mdv-gui_*.tar.gz; do
+            if [ -f "$archive" ]; then
+              echo "Uploading $archive to release..."
+              gh release upload "${GITHUB_REF#refs/tags/}" "$archive" --clobber
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Create Windows GUI archives
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF#refs/tags/}"
+
+          for arch in amd64; do
+            arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
+            gui_dir="cmd/mdv-gui/build/bin/mdv-gui_windows_${arch}"
+
+            if [ -d "$gui_dir" ] && [ -f "$gui_dir/mdv-gui.exe" ]; then
+              archive="mdv-gui_${VERSION}_windows_${arch_name}.zip"
+              echo "Creating $archive"
+
+              temp_dir=$(mktemp -d)
+              cp "$gui_dir/mdv-gui.exe" "$temp_dir/"
+              cp LICENSE* "$temp_dir/" 2>/dev/null || true
+              cp README* "$temp_dir/" 2>/dev/null || true
+              cp -r examples "$temp_dir/" 2>/dev/null || true
+
+              # Create zip archive
+              (cd "$temp_dir" && zip -r "../$archive" .)
+              rm -rf "$temp_dir"
+
+              echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+            else
+              echo "Warning: Windows $arch GUI binary not found, skipping"
+            fi
+          done
+
+      - name: Upload Windows GUI archives to release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          for archive in mdv-gui_*_windows_*.zip; do
             if [ -f "$archive" ]; then
               echo "Uploading $archive to release..."
               gh release upload "${GITHUB_REF#refs/tags/}" "$archive" --clobber
