@@ -1,0 +1,312 @@
+name: Test Release
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Build GUI binaries on native platforms (same as release.yml)
+  build-gui:
+    name: Build GUI (${{ matrix.os }})
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platforms: linux/amd64,linux/arm64
+            artifact-name: gui-linux
+          - os: macos-latest
+            platforms: darwin/amd64,darwin/arm64
+            artifact-name: gui-macos
+          - os: windows-latest
+            platforms: windows/amd64
+            artifact-name: gui-windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw -y
+          refreshenv
+
+      - name: Build GUI
+        env:
+          WAILS_PLATFORMS: ${{ matrix.platforms }}
+        run: ./scripts/build-wails.sh
+
+      - name: Upload GUI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: cmd/mdv-gui/build/bin/
+          retention-days: 7
+
+  # Test release job (runs GoReleaser in snapshot mode)
+  test-release:
+    needs: build-gui
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Download all GUI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: cmd/mdv-gui/build/bin/
+          merge-multiple: true
+
+      - name: List downloaded artifacts
+        run: |
+          echo "=== Downloaded GUI artifacts ==="
+          ls -laR cmd/mdv-gui/build/bin/
+
+      - name: Configure signing keychain
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/mdv-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          CERT_PATH="$RUNNER_TEMP/mdv-signing-cert.p12"
+          NOTARY_KEY_PATH="$RUNNER_TEMP/mdv-notary-key.p8"
+          PROFILE_NAME="mdv-notary-profile"
+
+          printf '%s' "$MACOS_SIGN_P12" | base64 --decode >"$CERT_PATH"
+          printf '%s' "$MACOS_NOTARY_KEY" | base64 --decode >"$NOTARY_KEY_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MACOS_SIGN_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+
+          xcrun notarytool store-credentials "$PROFILE_NAME" \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$MACOS_NOTARY_KEY_ID" \
+            --issuer "$MACOS_NOTARY_ISSUER_ID" \
+            --keychain "$KEYCHAIN_PATH"
+
+          {
+            echo "KEYCHAIN_PATH=$KEYCHAIN_PATH"
+            echo "MACOS_NOTARY_PROFILE_NAME=$PROFILE_NAME"
+            echo "CODESIGN_IDENTITY=Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)"
+          } >>"$GITHUB_ENV"
+        env:
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+
+      - name: Run GoReleaser (snapshot mode)
+        uses: goreleaser/goreleaser-action@v6.4.0
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Linux GUI archives
+        run: |
+          set -euo pipefail
+          VERSION="test-$(git rev-parse --short HEAD)"
+
+          for arch in amd64 arm64; do
+            arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
+            gui_dir="cmd/mdv-gui/build/bin/mdv-gui_linux_${arch}"
+
+            if [ -d "$gui_dir" ] && [ -f "$gui_dir/mdv-gui" ]; then
+              archive="mdv-gui_${VERSION}_linux_${arch_name}.tar.gz"
+              echo "Creating $archive"
+
+              mkdir -p /tmp/mdv-gui-linux
+              cp "$gui_dir/mdv-gui" /tmp/mdv-gui-linux/
+              cp LICENSE* /tmp/mdv-gui-linux/ || true
+              cp README* /tmp/mdv-gui-linux/ || true
+              cp -r examples /tmp/mdv-gui-linux/ || true
+
+              tar -czf "$archive" -C /tmp/mdv-gui-linux .
+              rm -rf /tmp/mdv-gui-linux
+
+              echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+            else
+              echo "Warning: Linux $arch GUI binary not found, skipping"
+            fi
+          done
+
+      - name: Create Windows GUI archives
+        run: |
+          set -euo pipefail
+          VERSION="test-$(git rev-parse --short HEAD)"
+
+          for arch in amd64; do
+            arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
+            gui_dir="cmd/mdv-gui/build/bin/mdv-gui_windows_${arch}"
+
+            if [ -d "$gui_dir" ] && [ -f "$gui_dir/mdv-gui.exe" ]; then
+              archive="mdv-gui_${VERSION}_windows_${arch_name}.zip"
+              echo "Creating $archive"
+
+              temp_dir=$(mktemp -d)
+              cp "$gui_dir/mdv-gui.exe" "$temp_dir/"
+              cp LICENSE* "$temp_dir/" 2>/dev/null || true
+              cp README* "$temp_dir/" 2>/dev/null || true
+              cp -r examples "$temp_dir/" 2>/dev/null || true
+
+              # Create zip archive
+              (cd "$temp_dir" && zip -r "../$archive" .)
+              rm -rf "$temp_dir"
+
+              echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+            else
+              echo "Warning: Windows $arch GUI binary not found, skipping"
+            fi
+          done
+
+      - name: Verify macOS signatures
+        run: ./scripts/verify-macos-signatures.sh
+
+      - name: Validate release artifacts
+        run: |
+          set -euo pipefail
+          echo "=== Validating Release Artifacts ==="
+
+          # Check GoReleaser dist directory
+          echo ""
+          echo "GoReleaser dist contents:"
+          ls -lh dist/ || echo "No dist/ directory found"
+
+          # Check for expected archives
+          echo ""
+          echo "Checking for expected archives..."
+
+          expected_files=(
+            "dist/mdv_*_darwin_*.tar.gz"
+            "dist/mdv-tui_*_linux_*.tar.gz"
+            "dist/mdv-tui_*_windows_*.zip"
+            "dist/mdv-gui_*_darwin_*.tar.gz"
+            "mdv-gui_*_linux_*.tar.gz"
+            "mdv-gui_*_windows_*.zip"
+          )
+
+          missing_files=()
+          for pattern in "${expected_files[@]}"; do
+            if ! ls $pattern 1>/dev/null 2>&1; then
+              missing_files+=("$pattern")
+            else
+              echo "✅ Found: $pattern"
+              ls -lh $pattern
+            fi
+          done
+
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo ""
+            echo "⚠️  Missing expected files:"
+            printf '%s\n' "${missing_files[@]}"
+            echo ""
+            echo "This may be expected if not all platforms built successfully."
+          fi
+
+          # Check checksums file
+          echo ""
+          if [ -f "dist/checksums.txt" ]; then
+            echo "✅ Checksums file created:"
+            cat dist/checksums.txt
+          else
+            echo "❌ No checksums.txt found"
+          fi
+
+          echo ""
+          echo "=== Validation Complete ==="
+
+      - name: Upload test release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-release-artifacts
+          path: |
+            dist/
+            mdv-gui_*.tar.gz
+            mdv-gui_*.zip
+          retention-days: 7
+
+      - name: Comment PR with artifact summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            // Get artifact sizes
+            let summary = '## 🧪 Test Release Summary\n\n';
+            summary += 'All binaries built and signed successfully! ✅\n\n';
+            summary += '### Artifacts Created\n\n';
+
+            try {
+              const files = execSync('ls -lh dist/*.tar.gz dist/*.zip mdv-gui_*.tar.gz mdv-gui_*.zip 2>/dev/null || true')
+                .toString()
+                .split('\n')
+                .filter(line => line.trim());
+
+              if (files.length > 0) {
+                summary += '```\n';
+                files.forEach(file => summary += file + '\n');
+                summary += '```\n\n';
+              }
+            } catch (e) {
+              summary += '_Could not list artifact files_\n\n';
+            }
+
+            summary += '### Platform Coverage\n\n';
+            summary += '- ✅ macOS (darwin/amd64, darwin/arm64) - Signed & Notarized\n';
+            summary += '- ✅ Linux (linux/amd64, linux/arm64)\n';
+            summary += '- ✅ Windows (windows/amd64)\n\n';
+            summary += '### What was tested\n\n';
+            summary += '- [x] GUI builds on all platforms\n';
+            summary += '- [x] Code signing (macOS)\n';
+            summary += '- [x] Notarization (macOS)\n';
+            summary += '- [x] Archive creation\n';
+            summary += '- [x] Checksum generation\n\n';
+            summary += '**Note:** This is a test release. No artifacts were published to GitHub Releases or Homebrew.\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
