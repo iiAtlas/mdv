@@ -1,0 +1,72 @@
+# Dockerfile for cross-compiling mdv Linux GUI for both amd64 and arm64
+# This uses cross-compilation instead of QEMU emulation for faster builds
+#
+# Build: docker build -f scripts/docker/Dockerfile.linux-crosscompile -t mdv-linux-crosscompile .
+# Run:   docker run --rm -v "$PWD:/workspace" -e WAILS_PLATFORMS=linux/arm64 -e CC=aarch64-linux-gnu-gcc mdv-linux-crosscompile
+
+FROM --platform=linux/amd64 ubuntu:22.04
+
+# Prevent interactive prompts during apt installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    pkg-config \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add ARM64 architecture
+RUN dpkg --add-architecture arm64
+
+# Configure APT sources for multi-arch packages
+# Ubuntu's default sources only serve amd64 packages
+# ARM64 packages must come from ports.ubuntu.com
+RUN echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse" > /etc/apt/sources.list.d/arm64.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list.d/arm64.list && \
+    echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse" >> /etc/apt/sources.list.d/arm64.list && \
+    sed -i 's/^deb http/deb [arch=amd64] http/' /etc/apt/sources.list
+
+# Update package lists with new ARM64 sources
+RUN apt-get update
+
+# Install native amd64 GTK/WebKit libraries (for building amd64 binaries)
+RUN apt-get install -y \
+    libgtk-3-dev \
+    libwebkit2gtk-4.0-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ARM64 cross-compilation toolchain and libraries
+RUN apt-get update && apt-get install -y \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    libc6-dev-arm64-cross \
+    libgtk-3-dev:arm64 \
+    libwebkit2gtk-4.0-dev:arm64 \
+    libglib2.0-dev:arm64 \
+    libcairo2-dev:arm64 \
+    libpango1.0-dev:arm64 \
+    libgdk-pixbuf2.0-dev:arm64 \
+    libsoup2.4-dev:arm64 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go 1.24
+ARG GO_VERSION=1.24.8
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:${PATH}" \
+    GOPATH="/go" \
+    GOTOOLCHAIN=local
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+# Install Wails CLI
+RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command: build Linux GUI for amd64
+# Override with environment variables:
+#   docker run -e WAILS_PLATFORMS=linux/arm64 -e CC=aarch64-linux-gnu-gcc mdv-linux-crosscompile
+CMD ["sh", "-c", "WAILS_PLATFORMS=${WAILS_PLATFORMS:-linux/amd64} ./scripts/build-wails.sh"]

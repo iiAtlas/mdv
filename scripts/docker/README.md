@@ -1,69 +1,133 @@
-# Docker Build Environment for Linux
+# Docker Build System for Linux GUI
 
-This directory contains Docker configurations for building the mdv Linux GUI without requiring a Linux VM.
+This directory contains Docker configurations for building mdv Linux GUI binaries on non-Linux platforms (macOS, Windows) and in CI/CD environments.
 
 ## Quick Start
 
-```bash
-# Build Linux GUI for both amd64 and arm64 using Docker (from repository root)
-./scripts/docker/build-linux.sh
+### Build Both Architectures (Recommended)
 
-# Or build for a specific architecture:
-./scripts/docker/build-linux.sh amd64    # x86_64 only
-./scripts/docker/build-linux.sh arm64    # ARM64 only
+```bash
+./scripts/docker/build-linux.sh
 ```
 
-This script will:
-1. Build the Docker image with all Linux dependencies (including ARM64 cross-compiler)
-2. Run the build inside the container
-3. Output binaries to `cmd/mdv-gui/build/bin/`
+This builds both AMD64 and ARM64 binaries using QEMU emulation for ARM64.
 
-## Manual Usage
-
-If you prefer to run Docker commands manually:
+### Build Specific Architecture
 
 ```bash
-# Build the Docker image (x86_64/amd64)
-docker build --platform linux/amd64 -f scripts/docker/Dockerfile.linux-build -t mdv-linux-builder .
+# AMD64 only (faster)
+./scripts/docker/build-linux.sh amd64
 
-# Build Linux GUI (amd64 native)
-docker run --platform linux/amd64 --rm -v "$PWD:/workspace" \
+# ARM64 only (slower due to QEMU)
+./scripts/docker/build-linux.sh arm64
+```
+
+Binaries will be output to `cmd/mdv-gui/build/bin/mdv-gui_linux_*/`
+
+## Available Dockerfiles
+
+### 1. `Dockerfile.linux-amd64` (Native AMD64 - Simple)
+
+**Build:**
+```bash
+docker buildx build --platform linux/amd64 -f scripts/docker/Dockerfile.linux-amd64 -t mdv-linux-amd64 .
+```
+
+**Run:**
+```bash
+docker run --rm -v "$PWD:/workspace" mdv-linux-amd64
+```
+
+**Output:** `cmd/mdv-gui/build/bin/mdv-gui_linux_amd64/mdv-gui`
+
+---
+
+### 2. `Dockerfile.linux-arm64` (Native ARM64 via QEMU)
+
+**Build:**
+```bash
+docker buildx build --platform linux/arm64 -f scripts/docker/Dockerfile.linux-arm64 -t mdv-linux-arm64 .
+```
+
+**Run:**
+```bash
+docker run --rm -v "$PWD:/workspace" mdv-linux-arm64
+```
+
+**Output:** `cmd/mdv-gui/build/bin/mdv-gui_linux_arm64/mdv-gui`
+
+**Note:** ARM64 builds are 2-4x slower due to QEMU emulation.
+
+---
+
+### 3. `Dockerfile.linux-crosscompile` (Cross-Compilation - Fastest)
+
+**Build Image:**
+```bash
+docker build -f scripts/docker/Dockerfile.linux-crosscompile -t mdv-linux-crosscompile .
+```
+
+**Build AMD64:**
+```bash
+docker run --rm -v "$PWD:/workspace" \
   -e WAILS_PLATFORMS=linux/amd64 \
   -e CC=gcc \
-  mdv-linux-builder
+  mdv-linux-crosscompile
+```
 
-# Build for ARM64 (cross-compile)
-docker run --platform linux/amd64 --rm -v "$PWD:/workspace" \
+**Build ARM64:**
+```bash
+docker run --rm -v "$PWD:/workspace" \
   -e WAILS_PLATFORMS=linux/arm64 \
   -e CC=aarch64-linux-gnu-gcc \
   -e PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig \
   -e PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
-  mdv-linux-builder
-
-# Run a shell inside the container for debugging
-docker run --platform linux/amd64 --rm -it -v "$PWD:/workspace" \
-  mdv-linux-builder bash
+  mdv-linux-crosscompile
 ```
 
-**Note**: The `--platform linux/amd64` flag ensures the container runs in x86_64 mode, which works on both Intel and Apple Silicon Macs (via Rosetta 2 emulation on Apple Silicon).
+**Pros:** Faster ARM64 builds (native AMD64 execution)
+**Cons:** More complex setup
 
-## Requirements
+## Prerequisites
 
-- Docker Desktop (macOS/Windows) or Docker Engine (Linux)
-- ~2GB disk space for the image
-- ~5-10 minutes for first build (image creation)
-- **Note**: On Apple Silicon Macs, the container runs via Rosetta 2 emulation (x86_64)
+### macOS (Docker Desktop)
 
-## What's Inside
+Docker Desktop includes all necessary tools:
+- Docker Buildx
+- QEMU emulation for multi-platform builds
 
-The Docker image includes:
-- Ubuntu 22.04 base (amd64)
-- Go 1.24
-- Wails CLI
-- GTK3 development libraries
-- WebKit2GTK development libraries
-- Build essentials (gcc, make, etc.)
-- ARM64 cross-compilation toolchain (gcc-aarch64-linux-gnu)
+**Install:**
+```bash
+brew install --cask docker
+```
+
+No additional setup required.
+
+### Linux (Native Docker)
+
+Install Docker Buildx and QEMU:
+
+```bash
+# Install Docker Buildx plugin
+sudo apt-get install docker-buildx-plugin
+
+# Install QEMU for multi-platform support
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
+
+### Windows (Docker Desktop)
+
+Same as macOS - Docker Desktop includes all tools.
+
+## Build Strategy Comparison
+
+| Strategy | Speed (AMD64) | Speed (ARM64) | Complexity | Best For |
+|----------|---------------|---------------|------------|----------|
+| Native (amd64/arm64) | 2 min | 6 min | Simple | Local dev |
+| Cross-Compile | 2 min | 2 min | Complex | Speed-critical |
+| GitHub Actions | 2 min | 2 min | Simple | CI/CD |
+
+**Recommendation:** Use `build-linux.sh` for local development (QEMU-based native builds)
 
 ## Troubleshooting
 
@@ -92,14 +156,53 @@ Clean up old Docker images:
 docker system prune -a
 ```
 
-## Advanced: Using with CI/CD
+### ARM64 build is very slow
 
-This same Dockerfile can be used in CI/CD pipelines that don't have native Linux runners:
+**Expected:** ARM64 builds via QEMU are 2-4x slower than native AMD64
 
-```yaml
-# GitHub Actions example
-- name: Build Linux GUI via Docker
-  run: |
-    docker build -f scripts/docker/Dockerfile.linux-build -t mdv-linux-builder .
-    docker run --rm -v "$PWD:/workspace" mdv-linux-builder
+**Solutions:**
+1. Use cross-compilation Dockerfile (faster but more complex)
+2. Accept slower build time (QEMU emulation overhead)
+3. Use native ARM64 machine
+
+### Error: "Package libgtk-3-dev:arm64 has no installation candidate"
+
+**Cause:** APT sources not configured for ARM64 packages
+
+**Solution:** Use the updated Dockerfiles which include proper APT source configuration for ports.ubuntu.com
+
+## Verifying Builds
+
+### Check Output
+
+```bash
+ls -lh cmd/mdv-gui/build/bin/
 ```
+
+Expected:
+```
+mdv-gui_linux_amd64/mdv-gui    # AMD64 binary
+mdv-gui_linux_arm64/mdv-gui    # ARM64 binary
+```
+
+### Test Binaries
+
+```bash
+# Test AMD64
+docker run --rm -v "$PWD:/workspace" ubuntu:22.04 \
+  /workspace/cmd/mdv-gui/build/bin/mdv-gui_linux_amd64/mdv-gui --version
+
+# Test ARM64 (requires QEMU)
+docker run --rm --platform linux/arm64 -v "$PWD:/workspace" ubuntu:22.04 \
+  /workspace/cmd/mdv-gui/build/bin/mdv-gui_linux_arm64/mdv-gui --version
+```
+
+## Related Documentation
+
+- **`cross-plat.md`** - Comprehensive cross-platform build guide
+- **`DOCKER_ANALYSIS.md`** - Technical analysis of Docker approach
+- **`.github/workflows/release.yml`** - CI/CD configuration
+
+---
+
+**Last Updated:** 2025-10-10
