@@ -36,6 +36,8 @@ docker run --platform linux/amd64 --rm -v "$PWD:/workspace" \
 docker run --platform linux/amd64 --rm -v "$PWD:/workspace" \
   -e WAILS_PLATFORMS=linux/arm64 \
   -e CC=aarch64-linux-gnu-gcc \
+  -e PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig \
+  -e PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig \
   mdv-linux-builder
 
 # Run a shell inside the container for debugging

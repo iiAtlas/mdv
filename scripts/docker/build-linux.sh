@@ -32,10 +32,18 @@ build_arch() {
 
   echo ""
   echo "=== Building Linux GUI for ${arch} in Docker container ==="
+
+  # Configure pkg-config for ARM64 cross-compilation
+  local extra_env=""
+  if [[ "$arch" == "arm64" ]]; then
+    extra_env="-e PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig -e PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+  fi
+
   docker run --platform linux/amd64 --rm \
     -v "$PWD:/workspace" \
     -e "WAILS_PLATFORMS=${platforms}" \
     -e "CC=${cc}" \
+    $extra_env \
     "$IMAGE_NAME"
 }
 
