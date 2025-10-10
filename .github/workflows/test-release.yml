@@ -77,6 +77,7 @@ jobs:
         env:
           WAILS_PLATFORMS: ${{ matrix.platforms }}
           CC: ${{ matrix.cc }}
+        shell: bash
         run: ./scripts/build-wails.sh
 
       - name: Upload GUI artifacts
@@ -164,6 +165,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Linux GUI archives
+        shell: bash
         run: |
           set -euo pipefail
           VERSION="test-$(git rev-parse --short HEAD)"
@@ -192,6 +194,7 @@ jobs:
           done
 
       - name: Create Windows GUI archives
+        shell: bash
         run: |
           set -euo pipefail
           VERSION="test-$(git rev-parse --short HEAD)"
