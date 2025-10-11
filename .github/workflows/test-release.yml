@@ -112,11 +112,13 @@ jobs:
           merge-multiple: true
 
       - name: List downloaded artifacts
+        shell: bash
         run: |
           echo "=== Downloaded GUI artifacts ==="
           ls -laR cmd/mdv-gui/build/bin/
 
       - name: Configure signing keychain
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -193,6 +195,14 @@ jobs:
             fi
           done
 
+      - name: Upload Linux GUI archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-linux-archives
+          path: mdv-gui_*_linux_*.tar.gz
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Create Windows GUI archives
         shell: bash
         run: |
@@ -223,10 +233,19 @@ jobs:
             fi
           done
 
+      - name: Upload Windows GUI archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-windows-archives
+          path: mdv-gui_*_windows_*.zip
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Verify macOS signatures
         run: ./scripts/verify-macos-signatures.sh
 
       - name: Validate release artifacts
+        shell: bash
         run: |
           set -euo pipefail
           echo "=== Validating Release Artifacts ==="
@@ -316,6 +335,33 @@ jobs:
             } catch (e) {
               summary += '_Could not list artifact files_\n\n';
             }
+
+            const guiSections = [
+              {
+                title: 'Linux GUI archives',
+                command: 'ls -lh mdv-gui_*_linux_*.tar.gz 2>/dev/null || true'
+              },
+              {
+                title: 'Windows GUI archives',
+                command: 'ls -lh mdv-gui_*_windows_*.zip 2>/dev/null || true'
+              }
+            ];
+
+            guiSections.forEach(({ title, command }) => {
+              try {
+                const output = execSync(command).toString().split('\n').filter(line => line.trim());
+                summary += `### ${title}\n\n`;
+                if (output.length > 0) {
+                  summary += '```\n';
+                  output.forEach(line => summary += line + '\n');
+                  summary += '```\n\n';
+                } else {
+                  summary += '_No archives found_\n\n';
+                }
+              } catch (e) {
+                summary += `### ${title}\n\n_Could not list files_\n\n`;
+              }
+            });
 
             summary += '### Platform Coverage\n\n';
             summary += '- ✅ macOS (darwin/amd64, darwin/arm64) - Signed & Notarized\n';

@@ -1,0 +1,60 @@
+# Docker build context exclusions for mdv
+# Reduces build context from ~2.9GB to ~50MB
+
+# Build artifacts and caches
+.cache/
+dist/
+cmd/mdv-gui/build/
+cmd/mdv-gui/frontend/dist/
+cmd/mdv-gui/frontend/wailsjs/
+*.exe
+*.dll
+*.dylib
+*.so
+/mdv
+wails_build.log
+
+# Git and version control
+.git/
+.github/
+.task/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Secrets and credentials (SECURITY CRITICAL)
+.env
+.env.local
+*.p8
+*.p12
+github_token
+certificate.p12
+decode.p12
+AuthKey_*.p8
+
+# Documentation (not needed for builds)
+*.md
+!README.md
+!go.mod
+!go.sum
+
+# Examples and assets (not needed for builds)
+examples/
+assets/
+
+# OS files
+.DS_Store
+*.tmp
+
+# Test and coverage
+coverage.html
+coverage.out
+*.test
+
+# Task runner
+.task/
+Makefile.backup

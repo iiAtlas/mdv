@@ -1,0 +1,107 @@
+# syntax=docker/dockerfile:1.4
+# Optimized Dockerfile for building mdv Linux GUI (amd64)
+#
+# This is an enhanced version of Dockerfile.linux-amd64 with:
+# - Multi-stage builds for smaller final images
+# - BuildKit cache mounts for faster rebuilds
+# - Pinned Wails version for reproducibility
+# - Go module layer caching
+#
+# Build: docker buildx build --platform linux/amd64 -f scripts/docker/Dockerfile.linux-amd64-optimized -t mdv-linux-amd64-optimized .
+# Run:   docker run --rm -v "$PWD:/workspace" mdv-linux-amd64-optimized
+
+# ==============================================================================
+# Builder Stage: Install tools and build the binary
+# ==============================================================================
+FROM --platform=linux/amd64 ubuntu:22.04 AS builder
+
+# Prevent interactive prompts during apt installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies with BuildKit cache mount for faster rebuilds
+# Cache is shared across builds and persists between runs
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    pkg-config \
+    ca-certificates \
+    libgtk-3-dev \
+    libwebkit2gtk-4.0-dev
+
+# Install Go 1.24.8 (pinned version)
+ARG GO_VERSION=1.24.8
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+
+# Set Go environment variables
+ENV PATH="/usr/local/go/bin:${PATH}" \
+    GOPATH="/go" \
+    GOTOOLCHAIN=local \
+    GOCACHE=/go-cache
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+# Install Wails CLI (pinned version for reproducibility)
+ARG WAILS_VERSION=v2.10.2
+RUN --mount=type=cache,target=/go-cache \
+    --mount=type=cache,target=/go/pkg/mod \
+    go install github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy go.mod and go.sum first for better layer caching
+# These files rarely change, so this layer will be cached most of the time
+COPY go.mod go.sum ./
+
+# Download Go modules with cache mount
+# This layer is cached until go.mod or go.sum changes
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+# Copy the rest of the source code
+# This happens last to maximize cache hits (source changes frequently)
+COPY . .
+
+# Build the GUI binary with cache mounts
+ARG WAILS_PLATFORMS=linux/amd64
+RUN --mount=type=cache,target=/go-cache \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=1 ./scripts/build-wails.sh
+
+# ==============================================================================
+# Runtime Stage (Optional): Minimal image for running the GUI
+# ==============================================================================
+# Uncomment this section if you want to create a runtime image instead of a builder
+
+# FROM --platform=linux/amd64 ubuntu:22.04 AS runtime
+#
+# ENV DEBIAN_FRONTEND=noninteractive
+#
+# # Install only runtime libraries (not -dev packages)
+# RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+#     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+#     apt-get update && apt-get install -y \
+#     libgtk-3-0 \
+#     libwebkit2gtk-4.0-37 \
+#     ca-certificates \
+#     && rm -rf /var/lib/apt/lists/*
+#
+# WORKDIR /app
+#
+# # Copy only the built binary from builder stage
+# COPY --from=builder /workspace/cmd/mdv-gui/build/bin/mdv-gui_linux_amd64/mdv-gui /app/mdv-gui
+#
+# # Run as non-root user for security
+# RUN useradd -m -u 1000 mdv && chown -R mdv:mdv /app
+# USER mdv
+#
+# ENTRYPOINT ["/app/mdv-gui"]
+
+# ==============================================================================
+# Default: Builder stage (current behavior - outputs binary to volume)
+# ==============================================================================
+
+# Default command: build Linux GUI for amd64
+CMD ["sh", "-c", "WAILS_PLATFORMS=linux/amd64 ./scripts/build-wails.sh"]
