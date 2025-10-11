@@ -154,9 +154,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download all GUI artifacts
+      - name: Download Linux GUI artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: gui-linux-*
+          path: cmd/mdv-gui/build/bin/
+          merge-multiple: true
+
+      - name: Download Windows GUI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gui-windows-*
           path: cmd/mdv-gui/build/bin/
           merge-multiple: true
 
@@ -172,12 +180,16 @@ jobs:
           fi
 
           shopt -s nullglob dotglob
-          for artifact_dir in "$base_dir"/gui-*; do
+          for artifact_dir in "$base_dir"/gui-linux-* "$base_dir"/gui-windows-*; do
             if [ -d "$artifact_dir" ]; then
               inner_dir="$artifact_dir/cmd/mdv-gui/build/bin"
               if [ -d "$inner_dir" ]; then
                 echo "Flattening $artifact_dir"
-                cp -a "$inner_dir"/. "$base_dir"/
+                for item in "$inner_dir"/*; do
+                  target="$base_dir/$(basename "$item")"
+                  rm -rf "$target"
+                  mv "$item" "$target"
+                done
                 rm -rf "$artifact_dir"
               fi
             fi
