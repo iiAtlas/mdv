@@ -203,6 +203,8 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/}"
 
+          # Linux uses tar from outside the target directory:
+          # tar can archive from any location using -C flag
           for arch in amd64 arm64; do
             arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
             gui_dir="cmd/mdv-gui/build/bin/mdv-gui_linux_${arch}"
@@ -211,16 +213,21 @@ jobs:
               archive="mdv-gui_${VERSION}_linux_${arch_name}.tar.gz"
               echo "Creating $archive"
 
-              mkdir -p /tmp/mdv-gui-linux
-              cp "$gui_dir/mdv-gui" /tmp/mdv-gui-linux/
-              cp LICENSE* /tmp/mdv-gui-linux/ || true
-              cp README* /tmp/mdv-gui-linux/ || true
-              cp -r examples /tmp/mdv-gui-linux/ || true
+              temp_dir=$(mktemp -d)
+              cp "$gui_dir/mdv-gui" "$temp_dir/"
+              cp LICENSE* "$temp_dir/" 2>/dev/null || true
+              cp README* "$temp_dir/" 2>/dev/null || true
+              cp -r examples "$temp_dir/" 2>/dev/null || true
 
-              tar -czf "$archive" -C /tmp/mdv-gui-linux .
-              rm -rf /tmp/mdv-gui-linux
+              tar -czf "$archive" -C "$temp_dir" .
+              rm -rf "$temp_dir"
 
-              echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+              if [ -f "$archive" ]; then
+                echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+                shasum -a 256 "$archive" | tee -a gui-checksums.txt
+              else
+                echo "Warning: Failed to create $archive"
+              fi
             else
               echo "Warning: Linux $arch GUI binary not found, skipping"
             fi
@@ -243,6 +250,9 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/}"
 
+          # Windows uses zip from inside the target directory:
+          # zip archives are typically created from within the directory being zipped
+          # We use an absolute path to ensure the archive is created in the repo root
           for arch in amd64; do
             arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
             gui_dir="cmd/mdv-gui/build/bin/mdv-gui_windows_${arch}"
@@ -264,6 +274,7 @@ jobs:
 
               if [ -f "$archive_path" ]; then
                 echo "Created: $archive ($(du -h "$archive_path" | cut -f1))"
+                shasum -a 256 "$archive_path" | tee -a gui-checksums.txt
               else
                 echo "Warning: Failed to create $archive"
               fi
@@ -281,6 +292,18 @@ jobs:
               gh release upload "${GITHUB_REF#refs/tags/}" "$archive" --clobber
             fi
           done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Upload GUI checksums to release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          if [ -f "gui-checksums.txt" ]; then
+            echo "Uploading GUI checksums to release..."
+            gh release upload "${GITHUB_REF#refs/tags/}" "gui-checksums.txt" --clobber
+          else
+            echo "Warning: gui-checksums.txt not found"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
