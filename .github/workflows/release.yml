@@ -17,7 +17,7 @@ jobs:
       is_release: true
       artifact_retention_days: 1
     secrets:
-      github_token: ${{ secrets.GH_PAT }}
+      gh_token: ${{ secrets.GH_PAT }}
       macos_sign_p12: ${{ secrets.MACOS_SIGN_P12 }}
       macos_sign_password: ${{ secrets.MACOS_SIGN_PASSWORD }}
       macos_notary_key: ${{ secrets.MACOS_NOTARY_KEY }}
