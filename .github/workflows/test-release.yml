@@ -164,7 +164,7 @@ jobs:
       - name: Download Windows GUI artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: gui-windows-*
+          pattern: gui-windows*
           path: cmd/mdv-gui/build/bin/
           merge-multiple: true
 
@@ -180,7 +180,7 @@ jobs:
           fi
 
           shopt -s nullglob dotglob
-          for artifact_dir in "$base_dir"/gui-linux-* "$base_dir"/gui-windows-*; do
+          for artifact_dir in "$base_dir"/gui-*; do
             if [ -d "$artifact_dir" ]; then
               inner_dir="$artifact_dir/cmd/mdv-gui/build/bin"
               if [ -d "$inner_dir" ]; then
