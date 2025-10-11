@@ -40,6 +40,11 @@ echo "verify: checking GUI binaries and app bundles"
 for artifact_dir in "${ROOT_DIR}"/cmd/mdv-gui/build/bin/mdv-gui_*; do
   [[ -d "$artifact_dir" ]] || continue
 
+  if [[ "$artifact_dir" != *"darwin"* ]]; then
+    echo "verify: skipping non-macOS GUI artifact ${artifact_dir##*/}"
+    continue
+  fi
+
   gui_bin="${artifact_dir}/mdv-gui"
   gui_app="${artifact_dir}/mdv-gui.app"
 
