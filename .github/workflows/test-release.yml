@@ -105,42 +105,6 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Download all GUI artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: cmd/mdv-gui/build/bin/
-          merge-multiple: true
-
-      - name: Flatten downloaded GUI artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          base_dir="cmd/mdv-gui/build/bin"
-
-          if [ ! -d "$base_dir" ]; then
-            echo "Base GUI directory not found: $base_dir"
-            exit 1
-          fi
-
-          shopt -s nullglob dotglob
-          for artifact_dir in "$base_dir"/gui-*; do
-            if [ -d "$artifact_dir" ]; then
-              inner_dir="$artifact_dir/cmd/mdv-gui/build/bin"
-              if [ -d "$inner_dir" ]; then
-                echo "Flattening $artifact_dir"
-                cp -a "$inner_dir"/. "$base_dir"/
-                rm -rf "$artifact_dir"
-              fi
-            fi
-          done
-          shopt -u nullglob dotglob
-
-      - name: List downloaded artifacts
-        shell: bash
-        run: |
-          echo "=== Downloaded GUI artifacts ==="
-          ls -laR cmd/mdv-gui/build/bin/
-
       - name: Configure signing keychain
         shell: bash
         run: |
@@ -189,6 +153,42 @@ jobs:
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all GUI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: cmd/mdv-gui/build/bin/
+          merge-multiple: true
+
+      - name: Flatten downloaded GUI artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_dir="cmd/mdv-gui/build/bin"
+
+          if [ ! -d "$base_dir" ]; then
+            echo "Base GUI directory not found: $base_dir"
+            exit 1
+          fi
+
+          shopt -s nullglob dotglob
+          for artifact_dir in "$base_dir"/gui-*; do
+            if [ -d "$artifact_dir" ]; then
+              inner_dir="$artifact_dir/cmd/mdv-gui/build/bin"
+              if [ -d "$inner_dir" ]; then
+                echo "Flattening $artifact_dir"
+                cp -a "$inner_dir"/. "$base_dir"/
+                rm -rf "$artifact_dir"
+              fi
+            fi
+          done
+          shopt -u nullglob dotglob
+
+      - name: List downloaded artifacts
+        shell: bash
+        run: |
+          echo "=== Downloaded GUI artifacts ==="
+          ls -laR cmd/mdv-gui/build/bin/
 
       - name: Create Linux GUI archives
         shell: bash
