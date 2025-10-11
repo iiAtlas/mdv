@@ -251,6 +251,7 @@ jobs:
 
             if [ -d "$gui_dir" ] && [ -f "$gui_dir/mdv-gui.exe" ]; then
               archive="mdv-gui_${VERSION}_windows_${arch_name}.zip"
+              archive_path="$(pwd)/$archive"
               echo "Creating $archive"
 
               temp_dir=$(mktemp -d)
@@ -259,11 +260,15 @@ jobs:
               cp README* "$temp_dir/" 2>/dev/null || true
               cp -r examples "$temp_dir/" 2>/dev/null || true
 
-              # Create zip archive
-              (cd "$temp_dir" && zip -r "../$archive" .)
+              # Create zip archive in repository root
+              (cd "$temp_dir" && zip -r "$archive_path" .)
               rm -rf "$temp_dir"
 
-              echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+              if [ -f "$archive_path" ]; then
+                echo "Created: $archive ($(du -h "$archive_path" | cut -f1))"
+              else
+                echo "Warning: Failed to create $archive"
+              fi
             else
               echo "Warning: Windows $arch GUI binary not found, skipping"
             fi
