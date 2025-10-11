@@ -1,0 +1,99 @@
+# syntax=docker/dockerfile:1.4
+# Dockerfile for mdv TUI (Terminal UI) - Minimal containerized markdown viewer
+#
+# This creates a tiny (~10MB) container image for running mdv in TUI mode only.
+# Perfect for:
+# - Servers and headless environments
+# - CI/CD pipelines
+# - Docker-based development workflows
+# - Kubernetes deployments
+#
+# Build multi-platform image:
+#   docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \
+#     -f scripts/docker/Dockerfile.tui -t mdv-tui:latest .
+#
+# Run:
+#   docker run --rm -it -v "$PWD:/data" mdv-tui /data/README.md
+#   docker run --rm -v "$PWD:/data" mdv-tui --help
+
+# ==============================================================================
+# Builder Stage: Build static TUI binary
+# ==============================================================================
+FROM --platform=$BUILDPLATFORM golang:1.24.8-alpine AS builder
+
+# Install build dependencies (git for go modules, ca-certificates for HTTPS)
+RUN apk add --no-cache git ca-certificates
+
+WORKDIR /build
+
+# Copy go.mod and go.sum first for better layer caching
+COPY go.mod go.sum ./
+
+# Download dependencies with cache mount
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+# Copy source code
+COPY . .
+
+# Build static binary for target platform
+# CGO_ENABLED=0 creates a fully static binary (no libc dependency)
+# -ldflags="-s -w" strips debug info to reduce binary size (~50% smaller)
+ARG TARGETOS TARGETARCH
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH} \
+    go build \
+    -ldflags="-s -w" \
+    -trimpath \
+    -o /mdv \
+    ./cmd/mdv
+
+# ==============================================================================
+# Runtime Stage: Minimal scratch image
+# ==============================================================================
+FROM scratch
+
+# Copy CA certificates for HTTPS (if mdv needs to fetch remote content)
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy the static binary
+COPY --from=builder /mdv /mdv
+
+# Copy example files (optional, helpful for quick testing)
+COPY examples/ /examples/
+
+# Set metadata labels
+LABEL org.opencontainers.image.title="mdv"
+LABEL org.opencontainers.image.description="Markdown viewer (TUI mode)"
+LABEL org.opencontainers.image.source="https://github.com/iiatlas/mdv"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# Default entrypoint
+ENTRYPOINT ["/mdv"]
+
+# Default command: show help
+CMD ["--help"]
+
+# ==============================================================================
+# Usage Examples:
+# ==============================================================================
+#
+# View a markdown file from current directory:
+#   docker run --rm -it -v "$PWD:/data" mdv-tui /data/README.md
+#
+# View with specific theme:
+#   docker run --rm -it -v "$PWD:/data" -e MDV_THEME=dracula mdv-tui /data/README.md
+#
+# Watch mode (auto-reload on changes):
+#   docker run --rm -it -v "$PWD:/data" mdv-tui --watch /data/README.md
+#
+# View examples included in image:
+#   docker run --rm -it mdv-tui /examples/demo.md
+#
+# Use as base image in Dockerfile:
+#   FROM mdv-tui:latest
+#   COPY docs/ /docs/
+#   CMD ["/docs/README.md"]

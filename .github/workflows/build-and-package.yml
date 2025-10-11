@@ -1,0 +1,332 @@
+name: Build and Package (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      is_release:
+        description: 'Whether this is a release build (affects version naming and GoReleaser mode)'
+        required: true
+        type: boolean
+      artifact_retention_days:
+        description: 'How long to retain artifacts (in days)'
+        required: false
+        type: number
+        default: 7
+    secrets:
+      gh_token:
+        description: 'GitHub token for GoReleaser (GITHUB_TOKEN or GH_PAT)'
+        required: true
+      macos_sign_p12:
+        description: 'macOS signing certificate (base64 encoded P12)'
+        required: true
+      macos_sign_password:
+        description: 'Password for macOS signing certificate'
+        required: true
+      macos_notary_key:
+        description: 'Apple notarization API key (base64 encoded)'
+        required: true
+      macos_notary_key_id:
+        description: 'Apple notarization key ID'
+        required: true
+      macos_notary_issuer_id:
+        description: 'Apple notarization issuer ID'
+        required: true
+    outputs:
+      version:
+        description: 'Version string used for this build'
+        value: ${{ jobs.package.outputs.version }}
+
+jobs:
+  # Build GUI binaries on native platforms
+  build-gui:
+    name: Build GUI (${{ matrix.name }})
+    strategy:
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-22.04
+            platforms: linux/amd64
+            cc: gcc
+            artifact-name: gui-linux-amd64
+          - name: linux-arm64
+            os: ubuntu-22.04-arm
+            platforms: linux/arm64
+            cc: gcc
+            artifact-name: gui-linux-arm64
+          - name: macos
+            os: macos-latest
+            platforms: darwin/amd64,darwin/arm64
+            cc: ""
+            artifact-name: gui-macos
+          - name: windows
+            os: windows-latest
+            platforms: windows/amd64
+            cc: ""
+            artifact-name: gui-windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+
+          # Install native build tools
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config
+
+          # Install native GTK/WebKit libraries (works for both amd64 and arm64)
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          choco install mingw -y
+          refreshenv
+
+      - name: Build GUI
+        env:
+          WAILS_PLATFORMS: ${{ matrix.platforms }}
+          CC: ${{ matrix.cc }}
+        shell: bash
+        run: ./scripts/build-wails.sh
+
+      - name: Upload GUI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: cmd/mdv-gui/build/bin/
+          retention-days: ${{ inputs.artifact_retention_days }}
+
+  # Package and sign artifacts
+  package:
+    needs: build-gui
+    runs-on: macos-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Set version
+        id: set-version
+        shell: bash
+        run: |
+          if [ "${{ inputs.is_release }}" = "true" ]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="test-$(git rev-parse --short HEAD)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Configure signing keychain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/mdv-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          CERT_PATH="$RUNNER_TEMP/mdv-signing-cert.p12"
+          NOTARY_KEY_PATH="$RUNNER_TEMP/mdv-notary-key.p8"
+          PROFILE_NAME="mdv-notary-profile"
+
+          printf '%s' "$MACOS_SIGN_P12" | base64 --decode >"$CERT_PATH"
+          printf '%s' "$MACOS_NOTARY_KEY" | base64 --decode >"$NOTARY_KEY_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MACOS_SIGN_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+
+          xcrun notarytool store-credentials "$PROFILE_NAME" \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$MACOS_NOTARY_KEY_ID" \
+            --issuer "$MACOS_NOTARY_ISSUER_ID" \
+            --keychain "$KEYCHAIN_PATH"
+
+          {
+            echo "KEYCHAIN_PATH=$KEYCHAIN_PATH"
+            echo "MACOS_NOTARY_PROFILE_NAME=$PROFILE_NAME"
+            echo "CODESIGN_IDENTITY=Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)"
+          } >>"$GITHUB_ENV"
+        env:
+          MACOS_SIGN_P12: ${{ secrets.macos_sign_p12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.macos_sign_password }}
+          MACOS_NOTARY_KEY: ${{ secrets.macos_notary_key }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.macos_notary_key_id }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.macos_notary_issuer_id }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6.4.0
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release ${{ inputs.is_release && '--clean' || '--snapshot --clean' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.gh_token }}
+
+      - name: Download Linux GUI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gui-linux-*
+          path: cmd/mdv-gui/build/bin/
+          merge-multiple: true
+
+      - name: Download Windows GUI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gui-windows*
+          path: cmd/mdv-gui/build/bin/
+          merge-multiple: true
+
+      - name: Flatten downloaded GUI artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_dir="cmd/mdv-gui/build/bin"
+
+          if [ ! -d "$base_dir" ]; then
+            echo "Base GUI directory not found: $base_dir"
+            exit 1
+          fi
+
+          shopt -s nullglob dotglob
+          for artifact_dir in "$base_dir"/gui-*; do
+            if [ -d "$artifact_dir" ]; then
+              inner_dir="$artifact_dir/cmd/mdv-gui/build/bin"
+              if [ -d "$inner_dir" ]; then
+                echo "Flattening $artifact_dir"
+                for item in "$inner_dir"/*; do
+                  target="$base_dir/$(basename "$item")"
+                  rm -rf "$target"
+                  mv "$item" "$target"
+                done
+                rm -rf "$artifact_dir"
+              fi
+            fi
+          done
+          shopt -u nullglob dotglob
+
+      - name: List downloaded artifacts
+        shell: bash
+        run: |
+          echo "=== Downloaded GUI artifacts ==="
+          ls -laR cmd/mdv-gui/build/bin/
+
+      - name: Create Linux GUI archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.set-version.outputs.version }}"
+
+          # Linux uses tar from outside the target directory:
+          # tar can archive from any location using -C flag
+          for arch in amd64 arm64; do
+            arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
+            gui_dir="cmd/mdv-gui/build/bin/mdv-gui_linux_${arch}"
+
+            if [ -d "$gui_dir" ] && [ -f "$gui_dir/mdv-gui" ]; then
+              archive="mdv-gui_${VERSION}_linux_${arch_name}.tar.gz"
+              echo "Creating $archive"
+
+              temp_dir=$(mktemp -d)
+              cp "$gui_dir/mdv-gui" "$temp_dir/"
+              cp LICENSE* "$temp_dir/" 2>/dev/null || true
+              cp README* "$temp_dir/" 2>/dev/null || true
+              cp -r examples "$temp_dir/" 2>/dev/null || true
+
+              tar -czf "$archive" -C "$temp_dir" .
+              rm -rf "$temp_dir"
+
+              if [ -f "$archive" ]; then
+                echo "Created: $archive ($(du -h "$archive" | cut -f1))"
+                shasum -a 256 "$archive" | tee -a gui-checksums.txt
+              else
+                echo "Warning: Failed to create $archive"
+              fi
+            else
+              echo "Warning: Linux $arch GUI binary not found, skipping"
+            fi
+          done
+
+      - name: Create Windows GUI archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.set-version.outputs.version }}"
+
+          # Windows uses zip from inside the target directory:
+          # zip archives are typically created from within the directory being zipped
+          # We use an absolute path to ensure the archive is created in the repo root
+          for arch in amd64; do
+            arch_name=$([ "$arch" = "amd64" ] && echo "x86_64" || echo "$arch")
+            gui_dir="cmd/mdv-gui/build/bin/mdv-gui_windows_${arch}"
+
+            if [ -d "$gui_dir" ] && [ -f "$gui_dir/mdv-gui.exe" ]; then
+              archive="mdv-gui_${VERSION}_windows_${arch_name}.zip"
+              archive_path="$(pwd)/$archive"
+              echo "Creating $archive"
+
+              temp_dir=$(mktemp -d)
+              cp "$gui_dir/mdv-gui.exe" "$temp_dir/"
+              cp LICENSE* "$temp_dir/" 2>/dev/null || true
+              cp README* "$temp_dir/" 2>/dev/null || true
+              cp -r examples "$temp_dir/" 2>/dev/null || true
+
+              # Create zip archive in repository root
+              (cd "$temp_dir" && zip -r "$archive_path" .)
+              rm -rf "$temp_dir"
+
+              if [ -f "$archive_path" ]; then
+                echo "Created: $archive ($(du -h "$archive_path" | cut -f1))"
+                shasum -a 256 "$archive_path" | tee -a gui-checksums.txt
+              else
+                echo "Warning: Failed to create $archive"
+              fi
+            else
+              echo "Warning: Windows $arch GUI binary not found, skipping"
+            fi
+          done
+
+      - name: Verify macOS signatures
+        run: ./scripts/verify-macos-signatures.sh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            mdv-gui_*.tar.gz
+            mdv-gui_*.zip
+            gui-checksums.txt
+          retention-days: ${{ inputs.artifact_retention_days }}

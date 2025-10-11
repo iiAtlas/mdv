@@ -52,6 +52,11 @@ builds:
       - -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+  # Note: Linux and Windows GUI binaries are built by ./scripts/build-wails.sh
+  # on native runners in CI (see .github/workflows/release.yml).
+  # They cannot be cross-compiled here due to CGO requirements.
+  # The pre-built binaries are packaged via GitHub Actions workflow.
+
 archives:
   - id: mdv-mac-archive
     ids:
@@ -103,6 +108,9 @@ archives:
         dst: mdv-gui
       - src: cmd/mdv-gui/build/bin/mdv-gui_{{ .Os }}_{{ .Arch }}/mdv-gui.app
         dst: mdv-gui.app
+
+  # Note: Linux and Windows GUI archives are created by GitHub Actions workflow
+  # after building on native runners. See .github/workflows/release.yml
 
 checksum:
   name_template: 'checksums.txt'

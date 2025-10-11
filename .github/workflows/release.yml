@@ -10,69 +10,63 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: macos-latest
+  # Call reusable workflow to build and package
+  build-and-package:
+    uses: ./.github/workflows/build-and-package.yml
+    with:
+      is_release: true
+      artifact_retention_days: 1
+    secrets:
+      gh_token: ${{ secrets.GH_PAT }}
+      macos_sign_p12: ${{ secrets.MACOS_SIGN_P12 }}
+      macos_sign_password: ${{ secrets.MACOS_SIGN_PASSWORD }}
+      macos_notary_key: ${{ secrets.MACOS_NOTARY_KEY }}
+      macos_notary_key_id: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+      macos_notary_issuer_id: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+
+  # Upload artifacts to GitHub Release
+  upload-to-release:
+    needs: build-and-package
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          name: build-artifacts
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Configure signing keychain
+      - name: Upload Linux GUI archives to release
         run: |
-          set -euo pipefail
-
-          KEYCHAIN_PATH="$RUNNER_TEMP/mdv-signing.keychain-db"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-          CERT_PATH="$RUNNER_TEMP/mdv-signing-cert.p12"
-          NOTARY_KEY_PATH="$RUNNER_TEMP/mdv-notary-key.p8"
-          PROFILE_NAME="mdv-notary-profile"
-
-          printf '%s' "$MACOS_SIGN_P12" | base64 --decode >"$CERT_PATH"
-          printf '%s' "$MACOS_NOTARY_KEY" | base64 --decode >"$NOTARY_KEY_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -P "$MACOS_SIGN_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-          security default-keychain -d user -s "$KEYCHAIN_PATH"
-
-          xcrun notarytool store-credentials "$PROFILE_NAME" \
-            --key "$NOTARY_KEY_PATH" \
-            --key-id "$MACOS_NOTARY_KEY_ID" \
-            --issuer "$MACOS_NOTARY_ISSUER_ID" \
-            --keychain "$KEYCHAIN_PATH"
-
-          {
-            echo "KEYCHAIN_PATH=$KEYCHAIN_PATH"
-            echo "MACOS_NOTARY_PROFILE_NAME=$PROFILE_NAME"
-            echo "CODESIGN_IDENTITY=Developer ID Application: Atlas Atlas Atlas LLC (294CD3C5SP)"
-          } >>"$GITHUB_ENV"
-        env:
-          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
-          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
-          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
-          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
-          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6.4.0
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
+          for archive in mdv-gui_*.tar.gz; do
+            if [ -f "$archive" ]; then
+              echo "Uploading $archive to release..."
+              gh release upload "${GITHUB_REF#refs/tags/}" "$archive" --clobber
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
-      - name: Verify macOS signatures
-        run: ./scripts/verify-macos-signatures.sh
+      - name: Upload Windows GUI archives to release
+        run: |
+          for archive in mdv-gui_*_windows_*.zip; do
+            if [ -f "$archive" ]; then
+              echo "Uploading $archive to release..."
+              gh release upload "${GITHUB_REF#refs/tags/}" "$archive" --clobber
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Upload GUI checksums to release
+        run: |
+          if [ -f "gui-checksums.txt" ]; then
+            echo "Uploading GUI checksums to release..."
+            gh release upload "${GITHUB_REF#refs/tags/}" "gui-checksums.txt" --clobber
+          else
+            echo "Warning: gui-checksums.txt not found"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}

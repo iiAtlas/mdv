@@ -31,7 +31,7 @@
       "icon": "./frontend/assets/mdv-app-icon.png"
     },
     "windows": {
-      "icon": "./frontend/assets/mdv-app-icon.png"
+      "icon": "./frontend/assets/mdv-app-icon.ico"
     }
   }
 }

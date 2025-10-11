@@ -6,7 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Wails can only produce native bundles reliably for macOS from macOS;
 # cross-compiling GUI binaries for other OSes is handled on their respective
 # builders. Keep the defaults focused on the supported macOS targets.
-DEFAULT_PLATFORMS="darwin/amd64,darwin/arm64"
+# Default to macOS for local development, but allow override via WAILS_PLATFORMS env var for CI
+DEFAULT_PLATFORMS="${WAILS_PLATFORMS:-darwin/amd64,darwin/arm64}"
 if [[ $# -gt 0 ]]; then
   PLATFORMS=$1
   shift
