@@ -2,10 +2,12 @@ package render
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -122,7 +124,76 @@ func ResolveTheme(theme, themeLight, themeDark string) string {
 	return detected
 }
 
-func ToHTML(src []byte, theme, themeLight, themeDark, width string) ([]byte, error) {
+// processLocalImages processes HTML and converts relative image paths to data URIs.
+// basePath is the directory of the markdown file, used to resolve relative paths.
+func processLocalImages(htmlContent string, basePath string) string {
+	// Regex to match img tags with src attributes
+	imgRegex := regexp.MustCompile(`<img\s+([^>]*?)src=["']([^"']+)["']([^>]*?)>`)
+
+	return imgRegex.ReplaceAllStringFunc(htmlContent, func(match string) string {
+		// Extract the src attribute value
+		srcRegex := regexp.MustCompile(`src=["']([^"']+)["']`)
+		srcMatches := srcRegex.FindStringSubmatch(match)
+		if len(srcMatches) < 2 {
+			return match
+		}
+
+		src := srcMatches[1]
+
+		// Skip if it's already a data URI or absolute URL
+		if strings.HasPrefix(src, "data:") ||
+		   strings.HasPrefix(src, "http://") ||
+		   strings.HasPrefix(src, "https://") ||
+		   strings.HasPrefix(src, "//") {
+			return match
+		}
+
+		// Resolve relative path to absolute path
+		var absPath string
+		if filepath.IsAbs(src) {
+			absPath = src
+		} else {
+			absPath = filepath.Join(basePath, src)
+		}
+
+		// Read the image file
+		imgData, err := os.ReadFile(absPath)
+		if err != nil {
+			// If we can't read the file, return the original tag
+			return match
+		}
+
+		// Determine MIME type based on file extension
+		ext := strings.ToLower(filepath.Ext(absPath))
+		mimeType := "image/png" // default
+		switch ext {
+		case ".jpg", ".jpeg":
+			mimeType = "image/jpeg"
+		case ".png":
+			mimeType = "image/png"
+		case ".gif":
+			mimeType = "image/gif"
+		case ".svg":
+			mimeType = "image/svg+xml"
+		case ".webp":
+			mimeType = "image/webp"
+		case ".bmp":
+			mimeType = "image/bmp"
+		case ".ico":
+			mimeType = "image/x-icon"
+		}
+
+		// Encode to base64
+		encoded := base64.StdEncoding.EncodeToString(imgData)
+		dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+
+		// Replace src attribute with data URI
+		newMatch := srcRegex.ReplaceAllString(match, fmt.Sprintf(`src="%s"`, dataURI))
+		return newMatch
+	})
+}
+
+func ToHTML(src []byte, theme, themeLight, themeDark, width, mdFilePath string) ([]byte, error) {
 	// Convert markdown to HTML
 	var buf bytes.Buffer
 	if err := md.Convert(src, &buf); err != nil {
@@ -152,6 +223,13 @@ func ToHTML(src []byte, theme, themeLight, themeDark, width string) ([]byte, err
 		widthCSS = fmt.Sprintf(".markdown-body { max-width: %s; margin-left: auto !important; margin-right: auto !important; }\n", maxWidth)
 	}
 
+	// Process local images if we have a file path
+	htmlContent := buf.String()
+	if mdFilePath != "" {
+		basePath := filepath.Dir(mdFilePath)
+		htmlContent = processLocalImages(htmlContent, basePath)
+	}
+
 	// Wrap the HTML with the CSS theme and markdown-body container
 	var output bytes.Buffer
 	output.WriteString("<style>\n")
@@ -161,7 +239,7 @@ func ToHTML(src []byte, theme, themeLight, themeDark, width string) ([]byte, err
 	output.WriteString(widthCSS) // Width CSS comes last to override any theme margins
 	output.WriteString("</style>\n")
 	output.WriteString(`<div class="markdown-body">` + "\n")
-	output.Write(buf.Bytes())
+	output.WriteString(htmlContent)
 	output.WriteString("\n</div>")
 
 	return output.Bytes(), nil

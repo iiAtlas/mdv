@@ -11,7 +11,7 @@ func TestToHTMLMatchesGolden(t *testing.T) {
 	src := []byte("# Title\n\nContent")
 	themePath := filepath.Join("testdata", "html_theme.css")
 
-	out, err := ToHTML(src, themePath, "", "", "800")
+	out, err := ToHTML(src, themePath, "", "", "800", "")
 	if err != nil {
 		t.Fatalf("ToHTML returned error: %v", err)
 	}
