@@ -110,7 +110,7 @@ func TestToHTMLWrapsOutputWithThemeAndWidth(t *testing.T) {
 	t.Setenv("COLORFGBG", "15;0")
 
 	src := []byte("# Title\n\nContent")
-	html, err := ToHTML(src, "auto", "", "", "narrow")
+	html, err := ToHTML(src, "auto", "", "", "narrow", "")
 	if err != nil {
 		t.Fatalf("ToHTML returned error: %v", err)
 	}
