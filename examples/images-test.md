@@ -18,7 +18,7 @@ This should display the mdv app icon:
 
 For comparison, here's an external image (should work without changes):
 
-![External](https://via.placeholder.com/150)
+![External](https://avatars.githubusercontent.com/u/764612?s=80&v=4)
 
 ## Test Results
 
