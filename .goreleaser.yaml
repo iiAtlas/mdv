@@ -79,8 +79,7 @@ archives:
     ids:
       - mdv-cross
     name_template: >-
-      {{ .ProjectName }}-
-      tui_
+      {{ .ProjectName }}-tui_
       {{- .Version }}_
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
@@ -97,8 +96,7 @@ archives:
     ids:
       - mdv-darwin
     name_template: >-
-      {{ .ProjectName }}-
-      gui_
+      {{ .ProjectName }}-gui_
       {{- .Version }}_
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
